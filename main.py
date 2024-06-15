@@ -169,6 +169,15 @@ class MainWindow(QtWidgets.QWidget):
     def create_set_widget(self, set_data: SetInfo):
         set_widget = QtWidgets.QWidget()
         set_layout = QtWidgets.QVBoxLayout()
+
+        image_layout = QtWidgets.QHBoxLayout()
+        info_layout = QtWidgets.QHBoxLayout()
+        button_layout = QtWidgets.QHBoxLayout()
+
+        set_layout.addLayout(image_layout)
+        set_layout.addLayout(info_layout)
+        set_layout.addLayout(button_layout)
+
         set_widget.setLayout(set_layout)
 
         # Add shadow effect
@@ -180,7 +189,11 @@ class MainWindow(QtWidgets.QWidget):
         set_widget.setStyleSheet("background-color: gray;")
 
         set_name = QtWidgets.QLabel(set_data.name)
-        set_layout.addWidget(set_name)
+        set_id = QtWidgets.QLabel(str(set_data.id))
+        set_pieces = QtWidgets.QLabel(str(set_data.pieces))
+        info_layout.addWidget(set_name)
+        info_layout.addWidget(set_id)
+        info_layout.addWidget(set_pieces)
 
         set_image = QtWidgets.QLabel()
         image_url = set_data.image_url
@@ -197,7 +210,22 @@ class MainWindow(QtWidgets.QWidget):
                 QtCore.Qt.TransformationMode.SmoothTransformation,
             )
         )
-        set_layout.addWidget(set_image)
+        image_layout.addWidget(set_image)
+
+        wishlist_button = QtWidgets.QPushButton("⭐")
+        wishlist_button.setFixedSize(30, 30)
+        wishlist_button.clicked.connect(
+            lambda: print(f"Added {set_data.name} to wishlist")
+        )
+
+        add_to_collection_button = QtWidgets.QPushButton("📋")
+        add_to_collection_button.setFixedSize(30, 30)
+        add_to_collection_button.clicked.connect(
+            lambda: print(f"Added {set_data.name} to collection")
+        )
+
+        button_layout.addWidget(add_to_collection_button)
+        button_layout.addWidget(wishlist_button)
 
         # Set size policy to expand the widgets and images properly
         set_widget.setSizePolicy(
