@@ -6,39 +6,53 @@ import urllib.request
 from Utils.api_requests import get_themes, get_sets_from_theme, SetInfo
 from Utils.api_setup import init_brickse
 
-init_brickse()
-
 
 class MainWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
 
+        self.setup_window()
+        self.load_navbar()
+        self.setup_main_layout()
+
+        self.load_themes()
+
+        # Start with default theme
+        self.select_default_theme("Castle")
+
+    def setup_window(self):
         self.setWindowTitle("BrickBuddy")
         self.setGeometry(100, 100, 1280, 720)
 
-        self.layout = QtWidgets.QVBoxLayout()
+        self.layout = QtWidgets.QHBoxLayout()
         self.setLayout(self.layout)
+
+    def setup_main_layout(self):
+        self.main_layout = QtWidgets.QVBoxLayout()
+        self.layout.addLayout(self.main_layout)
 
         # Normal UI components layout
         self.ui_layout = QtWidgets.QVBoxLayout()
-        self.layout.addLayout(self.ui_layout)
+        self.main_layout.addLayout(self.ui_layout)
 
         # Scroll area for the set widgets
         self.scroll_area = QtWidgets.QScrollArea()
         self.scroll_area.setWidgetResizable(True)
-        self.layout.addWidget(self.scroll_area)
+        self.main_layout.addWidget(self.scroll_area)
 
         self.scroll_content = QtWidgets.QWidget()
         self.scroll_area.setWidget(self.scroll_content)
         self.scroll_layout = QtWidgets.QVBoxLayout()
+        self.scroll_layout.setSpacing(
+            24
+        )  # Set the spacing between widgets in the scroll layout
         self.scroll_content.setLayout(self.scroll_layout)
 
-        self.load_navbar()
-        self.load_theme_dropdown()
-        self.load_home_page()
-
-        # Start with default theme
-        self.select_default_theme("Castle")
+    def load_title(self, title):
+        welcome_label = QtWidgets.QLabel(title)
+        welcome_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
+        welcome_label.setStyleSheet("font-size: 24px; font-weight: bold;")
+        self.ui_layout.addWidget(welcome_label)
 
     def load_theme_dropdown(self):
         themes = get_themes()
@@ -49,14 +63,14 @@ class MainWindow(QtWidgets.QWidget):
 
         # Title label
         self.title_label = QtWidgets.QLabel("Select Theme:")
-        self.title_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.title_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
 
         # Create a layout for the title and dropdown
-        title_layout = QtWidgets.QHBoxLayout()
-        title_layout.addWidget(self.title_label)
-        title_layout.addWidget(self.theme_dropdown)
+        self.title_layout = QtWidgets.QHBoxLayout()
+        self.title_layout.addWidget(self.title_label)
+        self.title_layout.addWidget(self.theme_dropdown)
 
-        self.ui_layout.addLayout(title_layout)
+        self.ui_layout.addLayout(self.title_layout)
 
     def theme_changed(self):
         selected_theme = self.theme_dropdown.currentText()
@@ -85,38 +99,48 @@ class MainWindow(QtWidgets.QWidget):
         self.scroll_layout.addLayout(grid_layout)
 
     def load_navbar(self):
-        self.navbar_container = QtWidgets.QWidget()
-        self.navbar_container.setFixedWidth(100)  # Set the fixed width of the navbar
-        self.layout.addWidget(
-            self.navbar_container
-        )  # Add the navbar to the main layout
+        self.navbar_layout = QtWidgets.QVBoxLayout()
+        self.navbar_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
 
-        self.navbar_container.setStyleSheet(
-            "background-color: gray;"
-        )  # Set the background color to gray
+        self.navbar_widget = QtWidgets.QWidget()
+        self.navbar_widget.setLayout(self.navbar_layout)
+        self.navbar_widget.setFixedWidth(200)
+        self.navbar_widget.setStyleSheet("background-color: #333;")
 
-        navbar_layout = QtWidgets.QVBoxLayout()
-        navbar_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
-        self.navbar_container.setLayout(navbar_layout)
+        self.home_button = QtWidgets.QPushButton("🏠 Home")
+        self.home_button.clicked.connect(self.load_themes)
+        self.style_button(self.home_button)
 
-        self.home_button = QtWidgets.QPushButton("Home")
-        self.home_button.clicked.connect(self.load_sets)
+        self.wishlist_button = QtWidgets.QPushButton("⭐ Wishlist")
+        self.wishlist_button.clicked.connect(self.load_wishlist)
+        self.style_button(self.wishlist_button)
 
-        self.wishlist_button = QtWidgets.QPushButton("Wishlist")
-        self.wishlist_button.clicked.connect(self.load_sets)
+        self.collections_button = QtWidgets.QPushButton("📋 Collections")
+        self.collections_button.clicked.connect(self.load_collections)
+        self.style_button(self.collections_button)
 
-        self.collections_button = QtWidgets.QPushButton("Collections")
-        self.collections_button.clicked.connect(self.load_themes)
+        self.navbar_layout.addWidget(self.home_button)
+        self.navbar_layout.addWidget(self.wishlist_button)
+        self.navbar_layout.addWidget(self.collections_button)
 
-        navbar_layout.addWidget(self.home_button)
-        navbar_layout.addWidget(self.wishlist_button)
-        navbar_layout.addWidget(self.collections_button)
+        # Add navbar_widget to the main layout
+        self.layout.addWidget(self.navbar_widget)
 
-    def load_home_page(self):
-        welcome_label = QtWidgets.QLabel("Welcome to BrickBuddy!")
-        welcome_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.ui_layout.addWidget(welcome_label)
-        print("Loading home page")
+    def style_button(self, button):
+        button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #333;
+                color: white;
+                border: none;
+                padding: 10px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #555;
+            }
+            """
+        )
 
     def delete_items_of_layout(self, layout):
         if layout is not None:
@@ -128,11 +152,19 @@ class MainWindow(QtWidgets.QWidget):
                 else:
                     self.delete_items_of_layout(item.layout())
 
+    def clear_main_layout(self):
+        print("Clearing main layout")
+        self.delete_items_of_layout(self.main_layout)
+        self.main_layout = QtWidgets.QVBoxLayout()
+        self.layout.addLayout(self.main_layout)
+
+        # Normal UI components layout
+        self.ui_layout = QtWidgets.QVBoxLayout()
+        self.main_layout.addLayout(self.ui_layout)
+
     def clear_scroll_layout(self):
         print("Clearing scroll layout")
-        print("Amount:", self.scroll_layout.count())
         self.delete_items_of_layout(self.scroll_layout)
-        print("Amount after:", self.scroll_layout.count())
 
     def create_set_widget(self, set_data: SetInfo):
         set_widget = QtWidgets.QWidget()
@@ -145,7 +177,7 @@ class MainWindow(QtWidgets.QWidget):
         shadow.setOffset(2, 2)
         set_widget.setGraphicsEffect(shadow)
 
-        set_widget.setStyleSheet("background-color: lightgray;")
+        set_widget.setStyleSheet("background-color: gray;")
 
         set_name = QtWidgets.QLabel(set_data.name)
         set_layout.addWidget(set_name)
@@ -183,16 +215,29 @@ class MainWindow(QtWidgets.QWidget):
         print("Loading sets")
 
     def load_themes(self):
+        self.clear_main_layout()
+        self.setup_main_layout()
+
+        self.load_title("Themes")
         print("Loading themes")
+        self.load_theme_dropdown()
 
     def load_collections(self):
+        self.clear_main_layout()
+        self.setup_main_layout()
+        self.load_title("Collections")
         print("Loading collections")
 
     def load_wishlist(self):
+        self.clear_main_layout()
+        self.setup_main_layout()
+        self.load_title("Wislist")
         print("Loading wishlist")
 
 
 if __name__ == "__main__":
+    init_brickse()
+
     app = QtWidgets.QApplication([])
 
     window = MainWindow()

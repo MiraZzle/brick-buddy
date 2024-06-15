@@ -23,31 +23,50 @@ def get_sets_from_theme(theme: str) -> list[str]:
     """
 
     raw_sets = json.loads(brickse.lego.get_sets(theme=theme).read())
+
+    print(raw_sets)
+
     sets = []
+    placeholder_sets = []
 
-    for set in raw_sets["sets"]:
-        set_id = set["setID"]
-        set_name = set["name"]
+    for _ in range(5):
+        placeholder_sets.append(
+            SetInfo(
+                1,
+                "a",
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/LEGO_logo.svg/1024px-LEGO_logo.svg.png",
+                2021,
+                100,
+            ),
+        )
 
-        try:
-            year = set["year"]
-        except KeyError:
-            year = None
+    try:
+        for set in raw_sets["sets"]:
+            set_id = set["setID"]
+            set_name = set["name"]
 
-        try:
-            pieces = set["pieces"]
-        except KeyError:
-            pieces = None
+            try:
+                year = set["year"]
+            except KeyError:
+                year = None
 
-        # some sets don't have an image - use a default image in that case
-        try:
-            set_img_url = set["image"]["imageURL"]
-        except KeyError:
-            set_img_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/LEGO_logo.svg/1024px-LEGO_logo.svg.png"
+            try:
+                pieces = set["pieces"]
+            except KeyError:
+                pieces = None
 
-        set_info = SetInfo(set_id, set_name, set_img_url, year, pieces)
+            # some sets don't have an image - use a default image in that case
+            try:
+                set_img_url = set["image"]["imageURL"]
+            except KeyError:
+                set_img_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/LEGO_logo.svg/1024px-LEGO_logo.svg.png"
 
-        sets.append(set_info)
+            set_info = SetInfo(set_id, set_name, set_img_url, year, pieces)
+
+            sets.append(set_info)
+    except KeyError:
+        print("Sets not found")
+        return placeholder_sets
 
     return sets
 
