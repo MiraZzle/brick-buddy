@@ -29,11 +29,11 @@ def get_sets_from_theme(theme: str) -> list[str]:
     sets = []
     placeholder_sets = []
 
-    for _ in range(5):
+    for _ in range(10):
         placeholder_sets.append(
             SetInfo(
-                1,
-                "a",
+                69,
+                "Amazing Set",
                 "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/LEGO_logo.svg/1024px-LEGO_logo.svg.png",
                 2021,
                 100,
