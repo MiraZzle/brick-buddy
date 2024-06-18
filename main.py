@@ -11,7 +11,13 @@ class MainWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
 
-        self.current_theme = "Castle"
+        self.collections = ["My Collection", "Wishlist", "Favourites"]
+        self.themes = get_themes()
+
+        self.SET_DISPLAY_BATCH = 8
+        self.current_theme = "Bricklink"
+        self.sets = []
+        self.displayed_sets_count = 0
 
         self.setup_window()
         self.load_navbar()
@@ -57,10 +63,9 @@ class MainWindow(QtWidgets.QWidget):
         self.ui_layout.addWidget(welcome_label)
 
     def load_theme_dropdown(self):
-        themes = get_themes()
 
         self.theme_dropdown = QtWidgets.QComboBox()
-        self.theme_dropdown.addItems(themes)
+        self.theme_dropdown.addItems(self.themes)
         self.theme_dropdown.setCurrentText(self.current_theme)
         self.theme_dropdown.currentIndexChanged.connect(self.theme_changed)
 
@@ -88,19 +93,32 @@ class MainWindow(QtWidgets.QWidget):
             self.theme_dropdown.setCurrentIndex(index)
 
     def load_sets_from_theme(self, theme):
-        sets = get_sets_from_theme(theme)
+        self.sets = get_sets_from_theme(theme)
+        self.displayed_sets_count = 0
+        self.display_next_batch()
+
+    def display_next_batch(self):
         grid_layout = QtWidgets.QGridLayout()
         row, col = 0, 0  # Start adding widgets from row 0, column 0
-        for i, set_info in enumerate(sets):
+        end_index = self.displayed_sets_count + self.SET_DISPLAY_BATCH
+        widget = None
+        for i in range(self.displayed_sets_count, min(end_index, len(self.sets))):
+            set_info = self.sets[i]
             set_widget = self.create_set_widget(set_info)
+            widget = set_widget
             grid_layout.addWidget(set_widget, row, col)
             col += 1
             if col >= 4:  # Reset column and move to next row after 4 items
                 col = 0
                 row += 1
 
+        self.displayed_sets_count = end_index
+
         # Add the new grid layout to the scroll layout
         self.scroll_layout.addLayout(grid_layout)
+
+        # Show or hide the load more button based on whether there are more sets to display
+        self.load_more_button.setVisible(self.displayed_sets_count < len(self.sets))
 
     def load_navbar(self):
         self.navbar_layout = QtWidgets.QVBoxLayout()
@@ -173,6 +191,11 @@ class MainWindow(QtWidgets.QWidget):
                 else:
                     self.delete_items_of_layout(item.layout())
 
+    def add_load_more_button(self):
+        self.load_more_button = QtWidgets.QPushButton("Load More")
+        self.load_more_button.clicked.connect(self.display_next_batch)
+        self.main_layout.addWidget(self.load_more_button)
+
     def clear_main_layout(self):
         print("Clearing main layout")
         self.delete_items_of_layout(self.main_layout)
@@ -187,18 +210,31 @@ class MainWindow(QtWidgets.QWidget):
         print("Clearing scroll layout")
         self.delete_items_of_layout(self.scroll_layout)
 
+    def style_card_info(self, layout):
+        for i in range(layout.count()):
+            widget = layout.itemAt(i).widget()
+            if widget is not None:
+                widget.setWordWrap(True)
+                widget.setStyleSheet(
+                    """
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: white;
+                    margin: 5px 0px 5px 0px;
+                    """
+                )
+
     def create_set_widget(self, set_data: SetInfo):
         set_widget = QtWidgets.QWidget()
         set_layout = QtWidgets.QVBoxLayout()
-
         image_layout = QtWidgets.QHBoxLayout()
-        info_layout = QtWidgets.QHBoxLayout()
+
+        info_layout = QtWidgets.QVBoxLayout()
         button_layout = QtWidgets.QHBoxLayout()
 
         set_layout.addLayout(image_layout)
         set_layout.addLayout(info_layout)
         set_layout.addLayout(button_layout)
-
         set_widget.setLayout(set_layout)
 
         # Add shadow effect
@@ -209,12 +245,15 @@ class MainWindow(QtWidgets.QWidget):
 
         set_widget.setStyleSheet("background-color: #1B1B1E;")
 
-        set_name = QtWidgets.QLabel(set_data.name)
-        set_id = QtWidgets.QLabel(str(set_data.id))
-        set_pieces = QtWidgets.QLabel(str(set_data.pieces))
+        set_name = QtWidgets.QLabel(f"📇 Name: {set_data.name}")
+        set_id = QtWidgets.QLabel(str(f"🪪 ID: {set_data.id}"))
+        set_pieces = QtWidgets.QLabel(f"🧱 Bricks: {set_data.pieces}")
+
         info_layout.addWidget(set_name)
         info_layout.addWidget(set_id)
         info_layout.addWidget(set_pieces)
+
+        self.style_card_info(info_layout)
 
         set_image = QtWidgets.QLabel()
         image_url = set_data.image_url
@@ -223,6 +262,8 @@ class MainWindow(QtWidgets.QWidget):
         image.loadFromData(image_data)
 
         pixmap = QtGui.QPixmap(image)
+
+        set_image.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         set_image.setPixmap(
             pixmap.scaled(
                 150,
@@ -231,18 +272,17 @@ class MainWindow(QtWidgets.QWidget):
                 QtCore.Qt.TransformationMode.SmoothTransformation,
             )
         )
+
         image_layout.addWidget(set_image)
 
         wishlist_button = QtWidgets.QPushButton("⭐ Wishlist")
         wishlist_button.setFixedSize(30, 30)
-        wishlist_button.clicked.connect(
-            lambda: self.display_favourite_window(set_data.id)
-        )
+        wishlist_button.clicked.connect(lambda: self.display_favourite_window(set_data))
 
         add_to_collection_button = QtWidgets.QPushButton("📋 Collect")
         add_to_collection_button.setFixedSize(30, 30)
         add_to_collection_button.clicked.connect(
-            lambda: print(f"Added {set_data.name} to collection")
+            lambda: self.display_collect_window(set_data)
         )
 
         self.style_card_item(wishlist_button)
@@ -252,10 +292,6 @@ class MainWindow(QtWidgets.QWidget):
         button_layout.addWidget(wishlist_button)
 
         # Set size policy to expand the widgets and images properly
-        set_widget.setSizePolicy(
-            QtWidgets.QSizePolicy.Policy.Expanding,
-            QtWidgets.QSizePolicy.Policy.Expanding,
-        )
         set_image.setSizePolicy(
             QtWidgets.QSizePolicy.Policy.Expanding,
             QtWidgets.QSizePolicy.Policy.Expanding,
@@ -273,6 +309,7 @@ class MainWindow(QtWidgets.QWidget):
         self.load_title("Themes")
         print("Loading themes")
         self.load_theme_dropdown()
+        self.add_load_more_button()
         self.load_sets_from_theme(self.current_theme)
 
     def load_collections(self):
@@ -287,18 +324,83 @@ class MainWindow(QtWidgets.QWidget):
         self.load_title("Wislist")
         print("Loading wishlist")
 
-    def display_favourite_window(self, set_id):
+    def display_collections_window(self, set_data):
+        print(f"Displaying collections window for set {set_data.id}")
+
+    def display_favourite_window(self, set_data):
+        set_id = set_data.id
+        set_name = set_data.name
+
         print(f"Displaying favourite window for set {set_id}")
         dialog = QtWidgets.QDialog()
         dialog.setWindowTitle("Favourite Window")
-        dialog.setFixedSize(400, 300)
+        dialog.setFixedSize(600, 400)
 
         layout = QtWidgets.QVBoxLayout()
         dialog.setLayout(layout)
+        set_name_label = QtWidgets.QLabel(f"Set Name: {set_name}")
         set_id_label = QtWidgets.QLabel(f"Set ID: {set_id}")
+
+        layout.addWidget(set_name_label)
         layout.addWidget(set_id_label)
+        set_notes = QtWidgets.QTextEdit()
+        set_notes.setPlaceholderText("Add notes here")
+        layout.addWidget(set_notes)
+        save_button = QtWidgets.QPushButton("Save")
+        save_button.clicked.connect(
+            lambda: self.add_to_favorite(set_data, set_notes.toPlainText(), dialog)
+        )
+        layout.addWidget(save_button)
 
         dialog.exec()
+
+    def add_to_favorite(self, set_data, notes, dialog):
+        print(f"Adding set {set_data.id} to favourites")
+        print(f"Notes: {notes}")
+        dialog.close()
+
+    def display_collect_window(self, set_data):
+        set_id = set_data.id
+        set_name = set_data.name
+
+        dialog = QtWidgets.QDialog()
+        dialog.setWindowTitle("Collection Window")
+        dialog.setFixedSize(600, 400)
+
+        layout = QtWidgets.QVBoxLayout()
+        dialog.setLayout(layout)
+        set_name_label = QtWidgets.QLabel(f"Set Name: {set_name}")
+        set_id_label = QtWidgets.QLabel(f"Set ID: {set_id}")
+        dropdown = QtWidgets.QComboBox()
+        theme_label = QtWidgets.QLabel("Select Theme:")
+
+        dropdown.addItems(self.collections)
+        dropdown.setCurrentText(self.collections[0])
+
+        layout.addWidget(set_name_label)
+        layout.addWidget(set_id_label)
+        layout.addWidget(theme_label)
+        layout.addWidget(dropdown)
+        set_notes = QtWidgets.QTextEdit()
+        set_notes.setPlaceholderText("Add notes here")
+        layout.addWidget(set_notes)
+        save_button = QtWidgets.QPushButton("Save")
+        save_button.clicked.connect(
+            lambda: self.add_to_collection(
+                set_data, set_notes.toPlainText(), dialog, dropdown.currentText()
+            )
+        )
+        layout.addWidget(save_button)
+
+        dialog.exec()
+
+        print(f"Adding set {set_data.id} to collection")
+
+    def add_to_collection(self, set_data, notes, dialog, collection_name):
+        print(f"Adding set {set_data.id} to collection")
+        print(f"Notes: {notes}")
+        print(f"Collection: {collection_name}")
+        dialog.close()
 
 
 if __name__ == "__main__":
