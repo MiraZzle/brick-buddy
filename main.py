@@ -11,6 +11,8 @@ class MainWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
 
+        self.current_theme = "Castle"
+
         self.setup_window()
         self.load_navbar()
         self.setup_main_layout()
@@ -18,7 +20,7 @@ class MainWindow(QtWidgets.QWidget):
         self.load_themes()
 
         # Start with default theme
-        self.select_default_theme("Castle")
+        self.select_default_theme(self.current_theme)
 
     def setup_window(self):
         self.setWindowTitle("BrickBuddy")
@@ -59,6 +61,7 @@ class MainWindow(QtWidgets.QWidget):
 
         self.theme_dropdown = QtWidgets.QComboBox()
         self.theme_dropdown.addItems(themes)
+        self.theme_dropdown.setCurrentText(self.current_theme)
         self.theme_dropdown.currentIndexChanged.connect(self.theme_changed)
 
         # Title label
@@ -75,6 +78,7 @@ class MainWindow(QtWidgets.QWidget):
     def theme_changed(self):
         selected_theme = self.theme_dropdown.currentText()
         print(f"Selected theme: {selected_theme}")
+        self.current_theme = selected_theme
         self.clear_scroll_layout()
         self.load_sets_from_theme(selected_theme)
 
@@ -142,6 +146,23 @@ class MainWindow(QtWidgets.QWidget):
             """
         )
 
+    def style_card_item(self, button):
+        button.setFixedSize(100, 30)
+        button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #333;
+                color: white;
+                border: none;
+                
+                text-align: center;
+            }
+            QPushButton:hover {
+                background-color: #555;
+            }
+            """
+        )
+
     def delete_items_of_layout(self, layout):
         if layout is not None:
             while layout.count():
@@ -186,7 +207,7 @@ class MainWindow(QtWidgets.QWidget):
         shadow.setOffset(2, 2)
         set_widget.setGraphicsEffect(shadow)
 
-        set_widget.setStyleSheet("background-color: gray;")
+        set_widget.setStyleSheet("background-color: #1B1B1E;")
 
         set_name = QtWidgets.QLabel(set_data.name)
         set_id = QtWidgets.QLabel(str(set_data.id))
@@ -212,17 +233,20 @@ class MainWindow(QtWidgets.QWidget):
         )
         image_layout.addWidget(set_image)
 
-        wishlist_button = QtWidgets.QPushButton("⭐")
+        wishlist_button = QtWidgets.QPushButton("⭐ Wishlist")
         wishlist_button.setFixedSize(30, 30)
         wishlist_button.clicked.connect(
-            lambda: print(f"Added {set_data.name} to wishlist")
+            lambda: self.display_favourite_window(set_data.id)
         )
 
-        add_to_collection_button = QtWidgets.QPushButton("📋")
+        add_to_collection_button = QtWidgets.QPushButton("📋 Collect")
         add_to_collection_button.setFixedSize(30, 30)
         add_to_collection_button.clicked.connect(
             lambda: print(f"Added {set_data.name} to collection")
         )
+
+        self.style_card_item(wishlist_button)
+        self.style_card_item(add_to_collection_button)
 
         button_layout.addWidget(add_to_collection_button)
         button_layout.addWidget(wishlist_button)
@@ -249,6 +273,7 @@ class MainWindow(QtWidgets.QWidget):
         self.load_title("Themes")
         print("Loading themes")
         self.load_theme_dropdown()
+        self.load_sets_from_theme(self.current_theme)
 
     def load_collections(self):
         self.clear_main_layout()
@@ -261,6 +286,19 @@ class MainWindow(QtWidgets.QWidget):
         self.setup_main_layout()
         self.load_title("Wislist")
         print("Loading wishlist")
+
+    def display_favourite_window(self, set_id):
+        print(f"Displaying favourite window for set {set_id}")
+        dialog = QtWidgets.QDialog()
+        dialog.setWindowTitle("Favourite Window")
+        dialog.setFixedSize(400, 300)
+
+        layout = QtWidgets.QVBoxLayout()
+        dialog.setLayout(layout)
+        set_id_label = QtWidgets.QLabel(f"Set ID: {set_id}")
+        layout.addWidget(set_id_label)
+
+        dialog.exec()
 
 
 if __name__ == "__main__":

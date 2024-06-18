@@ -41,6 +41,8 @@ def get_sets_from_theme(theme: str) -> list[str]:
         )
 
     try:
+        # raise KeyError("Test error")
+
         for set in raw_sets["sets"]:
             set_id = set["setID"]
             set_name = set["name"]
@@ -64,8 +66,9 @@ def get_sets_from_theme(theme: str) -> list[str]:
             set_info = SetInfo(set_id, set_name, set_img_url, year, pieces)
 
             sets.append(set_info)
-    except KeyError:
+    except KeyError as e:
         print("Sets not found")
+        print(e)
         return placeholder_sets
 
     return sets
