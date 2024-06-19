@@ -155,7 +155,7 @@ class Model:
         with open(wishlist_file_path, mode="r", newline="") as wishlist_file:
             wishlist_reader = csv.reader(wishlist_file)
             for row in wishlist_reader:
-                if row and row[0] == set_id:
+                if row and row[0] == str(set_id):
                     print(f"Set {set_id} already in wishlist")
                     return
 

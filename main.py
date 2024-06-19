@@ -33,6 +33,8 @@ class MainWindow(QtWidgets.QWidget):
         self.sets = []
         self.displayed_sets_count = 0
         self.displayed_favourites_count = 0
+        self.current_row = 0
+        self.current_col = 0
 
         self.setup_window()
         self.load_navbar()
@@ -53,21 +55,19 @@ class MainWindow(QtWidgets.QWidget):
     def setup_main_layout(self):
         """Setup the main layout of the window."""
         self.main_layout = QtWidgets.QVBoxLayout()
-        self.layout.addLayout(self.main_layout)
-
-        # UI components layout
         self.ui_layout = QtWidgets.QVBoxLayout()
-        self.main_layout.addLayout(self.ui_layout)
-
-        # Scroll area for the set widgets
         self.scroll_area = QtWidgets.QScrollArea()
+        self.scroll_content = QtWidgets.QWidget()
+        self.scroll_layout = QtWidgets.QVBoxLayout()
+        self.grid_layout = QtWidgets.QGridLayout()
+
+        self.layout.addLayout(self.main_layout)
+        self.main_layout.addLayout(self.ui_layout)
         self.scroll_area.setWidgetResizable(True)
         self.main_layout.addWidget(self.scroll_area)
-
-        self.scroll_content = QtWidgets.QWidget()
         self.scroll_area.setWidget(self.scroll_content)
-        self.scroll_layout = QtWidgets.QVBoxLayout()
         self.scroll_layout.setSpacing(24)
+        self.scroll_layout.addLayout(self.grid_layout)
         self.scroll_content.setLayout(self.scroll_layout)
 
     def load_navbar(self):
@@ -148,7 +148,10 @@ class MainWindow(QtWidgets.QWidget):
         selected_theme = self.theme_dropdown.currentText()
         print(f"Selected theme: {selected_theme}")
         self.current_theme = selected_theme
-        self.clear_scroll_layout()
+        self.clear_grid_layout()
+        self.current_row = 0
+        self.current_col = 0
+        print(self.current_row, self.current_col)
         self.load_sets_from_theme(selected_theme)
 
     def select_default_theme(self, theme_name: str):
@@ -179,23 +182,17 @@ class MainWindow(QtWidgets.QWidget):
         self, items_to_display, displayed_amount, widget_create_func, column_count=4
     ):
         """Display the next batch of sets."""
-        grid_layout = QtWidgets.QGridLayout()
-        row, col = 0, 0
         end_index = displayed_amount + self.SET_DISPLAY_BATCH
 
         for i in range(displayed_amount, min(end_index, len(items_to_display))):
             set_info = items_to_display[i]
             set_widget = widget_create_func(set_info)
-            grid_layout.addWidget(set_widget, row, col)
-            col += 1
-            if col >= column_count:  # Reset column and move to next row after 4 items
-                col = 0
-                row += 1
+            self.grid_layout.addWidget(set_widget, self.current_row, self.current_col)
+            self.current_col += 1
+            if self.current_col >= column_count:
+                self.current_col = 0
+                self.current_row += 1
 
-        # Add the new grid layout to the scroll layout
-        self.scroll_layout.addLayout(grid_layout)
-
-        # Show or hide the load more button based on whether there are more sets to display
         self.load_more_button.setVisible(end_index < len(items_to_display))
 
         return end_index
@@ -208,14 +205,23 @@ class MainWindow(QtWidgets.QWidget):
 
     def clear_main_layout(self):
         """Clear the main layout."""
-        print("Clearing main layout")
+        # print("Clearing main layout")
         self.delete_items_of_layout(self.main_layout)
         self.main_layout = QtWidgets.QVBoxLayout()
         self.layout.addLayout(self.main_layout)
+        self.grid_layout = QtWidgets.QGridLayout()
+        self.main_layout.addLayout(self.ui_layout)
 
         # Normal UI components layout
         self.ui_layout = QtWidgets.QVBoxLayout()
-        self.main_layout.addLayout(self.ui_layout)
+        self.scroll_layout.addLayout(self.grid_layout)
+
+    def clear_grid_layout(self):
+        """Clear the grid layout."""
+        # print("Clearing grid layout")
+        self.delete_items_of_layout(self.grid_layout)
+        self.current_row = 0
+        self.current_col = 0
 
     def clear_scroll_layout(self):
         """Clear the scroll layout."""
@@ -344,6 +350,10 @@ class MainWindow(QtWidgets.QWidget):
     def load_themes(self):
         """Load and display themes."""
         self.clear_main_layout()
+        # self.clear_grid_layout()
+
+        self.current_row = 0
+        self.current_col = 0
         self.setup_main_layout()
 
         self.load_title("Themes")
@@ -355,6 +365,11 @@ class MainWindow(QtWidgets.QWidget):
         """Load the wishlist view."""
         self.displayed_favourites_count = 0
         self.clear_main_layout()
+        # self.clear_grid_layout()
+
+        self.current_row = 0
+        self.current_col = 0
+
         self.setup_main_layout()
         self.load_title("Wishlist")
         self.display_next_wishlist_batch()
