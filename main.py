@@ -3,6 +3,7 @@ import brickse
 from PyQt6 import QtWidgets, QtGui, QtCore
 import urllib.request
 
+from Models.data_model import Model
 from Utils.api_requests import get_themes, get_sets_from_theme, SetInfo
 from Utils.api_setup import init_brickse
 
@@ -31,6 +32,7 @@ class MainWindow(QtWidgets.QWidget):
         self.current_theme = "Bricklink"
         self.sets = []
         self.displayed_sets_count = 0
+        self.displayed_favourites_count = 0
 
         self.setup_window()
         self.load_navbar()
@@ -114,16 +116,6 @@ class MainWindow(QtWidgets.QWidget):
         )
         return button
 
-    def load_themes(self):
-        """Load and display themes."""
-        self.clear_main_layout()
-        self.setup_main_layout()
-
-        self.load_title("Themes")
-        self.load_theme_dropdown()
-        self.add_load_more_button()
-        self.load_sets_from_theme(self.current_theme)
-
     def load_title(self, title: str):
         """Load and display the title."""
         welcome_label = QtWidgets.QLabel(title)
@@ -169,35 +161,49 @@ class MainWindow(QtWidgets.QWidget):
         """Load sets from the selected theme."""
         self.sets = get_sets_from_theme(theme)
         self.displayed_sets_count = 0
-        self.display_next_batch()
+        self.display_next_sets_batch()
 
-    def display_next_batch(self):
+    def display_next_sets_batch(self):
+        """Display the next batch of sets."""
+        self.displayed_sets_count += self.display_next_batch(
+            self.sets, self.displayed_sets_count, self.create_set_widget, 4
+        )
+
+    def display_next_wishlist_batch(self):
+        """Display the next batch of favourites."""
+        self.displayed_favourites_count += self.display_next_batch(
+            self.sets, self.displayed_favourites_count, self.create_set_widget, 5
+        )
+
+    def display_next_batch(
+        self, items_to_display, displayed_amount, widget_create_func, column_count=4
+    ):
         """Display the next batch of sets."""
         grid_layout = QtWidgets.QGridLayout()
         row, col = 0, 0
-        end_index = self.displayed_sets_count + self.SET_DISPLAY_BATCH
+        end_index = displayed_amount + self.SET_DISPLAY_BATCH
 
-        for i in range(self.displayed_sets_count, min(end_index, len(self.sets))):
-            set_info = self.sets[i]
-            set_widget = self.create_set_widget(set_info)
+        for i in range(displayed_amount, min(end_index, len(items_to_display))):
+            set_info = items_to_display[i]
+            set_widget = widget_create_func(set_info)
             grid_layout.addWidget(set_widget, row, col)
             col += 1
-            if col >= 4:  # Reset column and move to next row after 4 items
+            if col >= column_count:  # Reset column and move to next row after 4 items
                 col = 0
                 row += 1
-
-        self.displayed_sets_count = end_index
 
         # Add the new grid layout to the scroll layout
         self.scroll_layout.addLayout(grid_layout)
 
         # Show or hide the load more button based on whether there are more sets to display
-        self.load_more_button.setVisible(self.displayed_sets_count < len(self.sets))
+        self.load_more_button.setVisible(end_index < len(items_to_display))
 
-    def add_load_more_button(self):
+        return end_index
+
+    def add_load_more_button(self, display_func):
         """Add the 'Load More' button."""
         self.load_more_button = QtWidgets.QPushButton("Load More")
-        self.load_more_button.clicked.connect(self.display_next_batch)
+        self.load_more_button.clicked.connect(display_func)
         self.main_layout.addWidget(self.load_more_button)
 
     def clear_main_layout(self):
@@ -335,11 +341,25 @@ class MainWindow(QtWidgets.QWidget):
                 """
                 )
 
+    def load_themes(self):
+        """Load and display themes."""
+        self.clear_main_layout()
+        self.setup_main_layout()
+
+        self.load_title("Themes")
+        self.load_theme_dropdown()
+        self.add_load_more_button(self.display_next_sets_batch)
+        self.load_sets_from_theme(self.current_theme)
+
     def load_wishlist(self):
         """Load the wishlist view."""
+        self.displayed_favourites_count = 0
         self.clear_main_layout()
         self.setup_main_layout()
         self.load_title("Wishlist")
+        self.display_next_wishlist_batch()
+        self.load_more_button.clicked.disconnect()
+        self.load_more_button.clicked.connect(self.display_next_wishlist_batch)
         print("Loading wishlist")
 
     def load_collections(self):
@@ -354,7 +374,7 @@ class MainWindow(QtWidgets.QWidget):
         set_id = set_data.id
         set_name = set_data.name
 
-        # Create the dialog window
+        # Create a dialog window
         dialog = self.create_dialog("Favourite Window", 600, 400)
         layout = dialog.layout()
 
@@ -365,6 +385,7 @@ class MainWindow(QtWidgets.QWidget):
         save_button = QtWidgets.QPushButton("Save")
 
         set_notes.setPlaceholderText("Add notes here")
+
         save_button.clicked.connect(
             lambda: self.add_to_favorite(set_data, set_notes.toPlainText(), dialog)
         )
@@ -381,6 +402,8 @@ class MainWindow(QtWidgets.QWidget):
         """Add a set to favourites."""
         print(f"Adding set {set_data.id} to favourites")
         print(f"Notes: {notes}")
+
+        Model.save_to_wishlist(set_data.id, notes)
         dialog.close()
 
     def display_collect_window(self, set_data: SetInfo):
