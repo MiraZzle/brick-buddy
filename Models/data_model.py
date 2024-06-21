@@ -1,5 +1,7 @@
 import csv
 import os
+import urllib.request
+
 from Utils.api_requests import SetInfo
 
 DATA_DIRECTORY = "UserData"
@@ -86,6 +88,7 @@ class Model:
                         "set_id",
                         "name",
                         "url",
+                        "brickset_url",
                         "year",
                         "pieces",
                         "notes",
@@ -98,6 +101,7 @@ class Model:
                     set_data.id,
                     set_data.name,
                     set_data.image_url,
+                    set_data.brickset_url,
                     set_data.year,
                     set_data.pieces,
                     notes,
@@ -193,7 +197,7 @@ class Model:
             if not file_exists:
                 # set_id,name,url,year,pieces,notes
                 wishlist_writer.writerow(
-                    ["set_id", "name", "url", "year", "pieces", "notes"]
+                    ["set_id", "name", "url", "brickset_url", "year", "pieces", "notes"]
                 )
 
             wishlist_writer.writerow(
@@ -201,6 +205,7 @@ class Model:
                     set_data.id,
                     set_data.name,
                     set_data.image_url,
+                    set_data.brickset_url,
                     set_data.year,
                     set_data.pieces,
                     notes,
@@ -221,7 +226,7 @@ class Model:
             )
 
             wishlist_writer.writerow(
-                ["set_id", "name", "url", "year", "pieces", "notes"]
+                ["set_id", "name", "url", "brickset_url", "year", "pieces", "notes"]
             )
 
             for row in wishlist_data:

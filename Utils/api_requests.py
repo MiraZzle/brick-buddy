@@ -24,7 +24,7 @@ def get_sets_from_theme(theme: str) -> list[str]:
 
     raw_sets = json.loads(brickse.lego.get_sets(theme=theme).read())
 
-    # print(raw_sets)
+    print(raw_sets)
 
     sets = []
     placeholder_sets = []
@@ -35,6 +35,7 @@ def get_sets_from_theme(theme: str) -> list[str]:
                 69,
                 "Amazing Set",
                 "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/LEGO_logo.svg/1024px-LEGO_logo.svg.png",
+                "google.com",
                 2021,
                 100,
             ),
@@ -57,13 +58,20 @@ def get_sets_from_theme(theme: str) -> list[str]:
             except KeyError:
                 pieces = None
 
+            try:
+                brickset_url = set["bricksetURL"]
+            except KeyError:
+                brickset_url = None
+
             # some sets don't have an image - use a default image in that case
             try:
                 set_img_url = set["image"]["imageURL"]
             except KeyError:
                 set_img_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/LEGO_logo.svg/1024px-LEGO_logo.svg.png"
 
-            set_info = SetInfo(set_id, set_name, set_img_url, year, pieces)
+            set_info = SetInfo(
+                set_id, set_name, set_img_url, brickset_url, year, pieces
+            )
 
             sets.append(set_info)
     except KeyError as e:
@@ -75,12 +83,20 @@ def get_sets_from_theme(theme: str) -> list[str]:
 
 
 class SetInfo:
+
     def __init__(
-        self, set_id: int, set_name: str, set_img_url: str, year: int, pieces: int
+        self,
+        set_id: int,
+        set_name: str,
+        set_img_url: str,
+        brickset_url: str,
+        year: int,
+        pieces: int,
     ):
         self.id = set_id
         self.name = set_name
         self.image_url = set_img_url
+        self.brickset_url = brickset_url
         self.year = year
         self.pieces = pieces
 
