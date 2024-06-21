@@ -189,7 +189,7 @@ class MainWindow(QtWidgets.QWidget):
     def display_next_batch_wishlist(self):
         """Display the next batch of sets."""
         end_index = self.displayed_favourites_count + self.SET_DISPLAY_BATCH
-        column_count = 4
+        column_count = 1
 
         for i in range(
             self.displayed_favourites_count, min(end_index, len(self.wishlisted_sets))
@@ -200,8 +200,9 @@ class MainWindow(QtWidgets.QWidget):
                 set_id=set_info[0],
                 set_name=set_info[1],
                 set_img_url=set_info[2],
-                year=set_info[3],
-                pieces=set_info[4],
+                brickset_url=set_info[3],
+                year=set_info[4],
+                pieces=set_info[5],
             )
 
             set_widget = self.create_wishlist_set_widget(
@@ -331,14 +332,23 @@ class MainWindow(QtWidgets.QWidget):
     ) -> QtWidgets.QWidget:
         """Create a widget for a single set."""
         set_widget = QtWidgets.QWidget()
-        set_layout = QtWidgets.QVBoxLayout()
-        image_layout = QtWidgets.QHBoxLayout()
+        set_layout = QtWidgets.QHBoxLayout()
+        image_layout = (
+            QtWidgets.QVBoxLayout()
+        )  # Changed to QVBoxLayout for better alignment
         info_layout = QtWidgets.QVBoxLayout()
-        button_layout = QtWidgets.QVBoxLayout()
+        button_layout = QtWidgets.QHBoxLayout()
 
+        left_side_layout = QtWidgets.QVBoxLayout()
+        set_layout.addLayout(left_side_layout)
         set_layout.addLayout(image_layout)
-        set_layout.addLayout(info_layout)
-        set_layout.addLayout(button_layout)
+
+        # Set the stretch factors
+        set_layout.setStretch(0, 1)
+        set_layout.setStretch(1, 1)
+
+        left_side_layout.addLayout(info_layout)
+        left_side_layout.addLayout(button_layout)
         set_widget.setLayout(set_layout)
 
         # Add shadow effect
@@ -347,20 +357,29 @@ class MainWindow(QtWidgets.QWidget):
         shadow.setOffset(2, 2)
         set_widget.setGraphicsEffect(shadow)
         set_widget.setStyleSheet("background-color: #1B1B1E;")
+        set_widget.setMaximumHeight(400)
 
         # Set details
         set_name = QtWidgets.QLabel(f"📇 Name: {set_data.name}")
         set_id = QtWidgets.QLabel(f"🪪 ID: {set_data.id}")
         set_pieces = QtWidgets.QLabel(f"🧱 Bricks: {set_data.pieces}")
 
+        # add id as link
+
+        set_brickset_url = QtWidgets.QLabel(
+            f"🔗 <a href={set_data.brickset_url}>Brickset Link</a>"
+        )
+        set_brickset_url.setOpenExternalLinks(True)
+
         info_layout.addWidget(set_name)
         info_layout.addWidget(set_id)
         info_layout.addWidget(set_pieces)
+        info_layout.addWidget(set_brickset_url)
         self.style_card_info(info_layout)
 
         # Set image
-        # set_image = self.load_set_image(set_data.image_url)
-        # image_layout.addWidget(set_image)
+        set_image = self.load_set_image(set_data.image_url)
+        image_layout.addWidget(set_image)
 
         # Action buttons
         detail_button = self.create_action_button(
@@ -641,6 +660,12 @@ class MainWindow(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout()
         dialog.setLayout(layout)
         return dialog
+
+    def display_collection_create_button(self):
+        """Display the 'Create Collection' button."""
+        create_button = QtWidgets.QPushButton("Create Collection")
+        create_button.clicked.connect(self.create_collection)
+        self.ui_layout.addWidget(create_button)
 
 
 if __name__ == "__main__":

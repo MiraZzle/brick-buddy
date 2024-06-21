@@ -1,3 +1,4 @@
-set_id,name,url,year,pieces,notes
-33772,Studgate Train Station,https://images.brickset.com/sets/images/910002-1.jpg,2023,4076,two
-1867,Riptide Racer,https://images.brickset.com/sets/images/4002-1.jpg,1996,54,cool boat
+set_id,name,url,brickset_url,year,pieces,notes
+33772,Studgate Train Station,https://images.brickset.com/sets/images/910002-1.jpg,https://brickset.com/sets/910002-1,2023,4076,looks cool
+33783,Winter Chalet,https://images.brickset.com/sets/images/910004-1.jpg,https://brickset.com/sets/910004-1,2023,2705,"is cool"
+32182,Modular LEGO Store,https://images.brickset.com/sets/images/910009-1.jpg,https://brickset.com/sets/910009-1,2022,2149,this is superb
