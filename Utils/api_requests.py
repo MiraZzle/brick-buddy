@@ -22,7 +22,7 @@ def get_sets_from_theme(theme: str) -> list[str]:
     Get a list of all LEGO set names from a specific theme.
     """
 
-    # raw_sets = json.loads(brickse.lego.get_sets(theme=theme).read())
+    raw_sets = json.loads(brickse.lego.get_sets(theme=theme).read())
 
     # print(raw_sets)
 
@@ -41,7 +41,7 @@ def get_sets_from_theme(theme: str) -> list[str]:
         )
 
     try:
-        raise KeyError("Test error")
+        # raise KeyError("Test error")
 
         for set in raw_sets["sets"]:
             set_id = set["setID"]

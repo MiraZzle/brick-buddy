@@ -1,5 +1,6 @@
 import csv
 import os
+from Utils.api_requests import SetInfo
 
 DATA_DIRECTORY = "UserData"
 
@@ -10,7 +11,7 @@ class Model:
     """
 
     @staticmethod
-    def save_new_collection(collection_name):
+    def create_collection(collection_name):
         """
         Saves a new collection to the collections file.
 
@@ -49,7 +50,7 @@ class Model:
             collections_writer.writerow([collection_name])
 
     @staticmethod
-    def save_collected_set(set_id, collection_name, notes):
+    def save_collected_set(set_data: SetInfo, collection_name, notes):
         """
         Saves a collected set to the collection data file.
 
@@ -64,8 +65,8 @@ class Model:
         with open(collections_file_path, mode="r", newline="") as collection_data_file:
             collection_data_reader = csv.reader(collection_data_file)
             for row in collection_data_reader:
-                if row and row[0] == set_id and row[1] == collection_name:
-                    print(f"Set {set_id} already in collection {collection_name}")
+                if row and row[1] == set_data.id and row[0] == collection_name:
+                    print(f"Set {set_data.id} already in collection {collection_name}")
                     return
 
         with open(collections_file_path, mode="a", newline="") as collection_data_file:
@@ -78,9 +79,30 @@ class Model:
 
             # Write header if file does not exist
             if not file_exists:
-                collection_data_writer.writerow(["set_id", "collection_name", "notes"])
+                # set_id,name,url,year,pieces,notes,collection_name
+                collection_data_writer.writerow(
+                    [
+                        "collection_name",
+                        "set_id",
+                        "name",
+                        "url",
+                        "year",
+                        "pieces",
+                        "notes",
+                    ]
+                )
 
-            collection_data_writer.writerow([set_id, collection_name, notes])
+            collection_data_writer.writerow(
+                [
+                    collection_name,
+                    set_data.id,
+                    set_data.name,
+                    set_data.image_url,
+                    set_data.year,
+                    set_data.pieces,
+                    notes,
+                ]
+            )
 
     @staticmethod
     def get_all_collections():
@@ -97,24 +119,7 @@ class Model:
         with open(collections_file_path, mode="r") as collections_file:
             collections_reader = csv.reader(collections_file)
             next(collections_reader, None)  # Skip header
-            return [row[0] for row in collections_reader if row]
-
-    @staticmethod
-    def get_wishlist_data():
-        """
-        Retrieves all wishlist items.
-
-        Returns:
-            list: A list of wishlist items.
-        """
-        wishlist_file_path = f"./{DATA_DIRECTORY}/wishlist.csv"
-        if not os.path.isfile(wishlist_file_path):
-            return []
-
-        with open(wishlist_file_path, mode="r") as wishlist_file:
-            wishlist_reader = csv.reader(wishlist_file)
-            next(wishlist_reader, None)  # Skip header
-            return [row for row in wishlist_reader if row]
+            return [row[0] for row in collections_reader]
 
     @staticmethod
     def get_collection_data(collection_name):
@@ -137,11 +142,28 @@ class Model:
             return [
                 row
                 for row in collection_data_reader
-                if row and row[1] == collection_name
+                if row and row[0] == collection_name
             ]
 
     @staticmethod
-    def save_to_wishlist(set_id, notes):
+    def get_wishlist_data():
+        """
+        Retrieves all wishlist items.
+
+        Returns:
+            list: A list of wishlist items.
+        """
+        wishlist_file_path = f"./{DATA_DIRECTORY}/wishlist.csv"
+        if not os.path.isfile(wishlist_file_path):
+            return []
+
+        with open(wishlist_file_path, mode="r") as wishlist_file:
+            wishlist_reader = csv.reader(wishlist_file)
+            next(wishlist_reader, None)  # Skip header
+            return [row for row in wishlist_reader]
+
+    @staticmethod
+    def save_to_wishlist(set_data: SetInfo, notes):
         """
         Saves a set to the wishlist.
 
@@ -155,8 +177,8 @@ class Model:
         with open(wishlist_file_path, mode="r", newline="") as wishlist_file:
             wishlist_reader = csv.reader(wishlist_file)
             for row in wishlist_reader:
-                if row and row[0] == str(set_id):
-                    print(f"Set {set_id} already in wishlist")
+                if row and row[0] == str(set_data.id):
+                    print(f"Set {set_data.id} already in wishlist")
                     return
 
         with open(wishlist_file_path, mode="a", newline="") as wishlist_file:
@@ -169,46 +191,39 @@ class Model:
 
             # Write header if file does not exist
             if not file_exists:
-                wishlist_writer.writerow(["setid", "notes"])
+                # set_id,name,url,year,pieces,notes
+                wishlist_writer.writerow(
+                    ["set_id", "name", "url", "year", "pieces", "notes"]
+                )
 
-            wishlist_writer.writerow([set_id, notes])
+            wishlist_writer.writerow(
+                [
+                    set_data.id,
+                    set_data.name,
+                    set_data.image_url,
+                    set_data.year,
+                    set_data.pieces,
+                    notes,
+                ]
+            )
 
     @staticmethod
-    def cache_set_data(set_data):
-        """
-        Caches set data.
+    def remove_from_wishlist(set_id):
+        wishlist_file_path = f"./{DATA_DIRECTORY}/wishlist.csv"
+        wishlist_data = Model.get_wishlist_data()
 
-        Args:
-            set_data (object): The set data to be cached.
-        """
-        cached_sets_file_path = f"./{DATA_DIRECTORY}/cached_sets.csv"
-        file_exists = os.path.isfile(cached_sets_file_path)
-
-        with open(cached_sets_file_path, mode="r", newline="") as set_data_file:
-            set_data_reader = csv.reader(set_data_file)
-            for row in set_data_reader:
-                if row and row[0] == set_data.set_id:
-                    print(f"Set {set_data.set_id} already cached")
-                    return
-
-        with open(cached_sets_file_path, mode="a", newline="") as set_data_file:
-            set_data_writer = csv.writer(
-                set_data_file,
+        with open(wishlist_file_path, mode="w", newline="") as wishlist_file:
+            wishlist_writer = csv.writer(
+                wishlist_file,
                 delimiter=",",
                 quotechar='"',
                 quoting=csv.QUOTE_MINIMAL,
             )
 
-            # Write header if file does not exist
-            if not file_exists:
-                set_data_writer.writerow(["set_id", "name", "url", "year", "pieces"])
-
-            set_data_writer.writerow(
-                [
-                    set_data.set_id,
-                    set_data.set_name,
-                    set_data.set_img_url,
-                    set_data.year,
-                    set_data.pieces,
-                ]
+            wishlist_writer.writerow(
+                ["set_id", "name", "url", "year", "pieces", "notes"]
             )
+
+            for row in wishlist_data:
+                if row[0] != set_id:
+                    wishlist_writer.writerow(row)
