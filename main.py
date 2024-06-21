@@ -25,12 +25,16 @@ class MainWindow(QtWidgets.QWidget):
         super().__init__()
 
         # Initial setup
-        self.collections = ["My Collection", "Wishlist", "Favourites"]
+        # self.collections = ["My Collection", "Wishlist", "Favourites"]
+
+        self.collections = Model.get_all_collections()
         self.themes = get_themes()
 
         self.SET_DISPLAY_BATCH = 8
         self.current_theme = "Bricklink"
         self.sets = []
+        self.wishlisted_sets = Model.get_wishlist_data()
+
         self.displayed_sets_count = 0
         self.displayed_favourites_count = 0
         self.current_row = 0
@@ -174,9 +178,45 @@ class MainWindow(QtWidgets.QWidget):
 
     def display_next_wishlist_batch(self):
         """Display the next batch of favourites."""
-        self.displayed_favourites_count += self.display_next_batch(
-            self.sets, self.displayed_favourites_count, self.create_set_widget, 5
-        )
+        self.display_next_batch_wishlist()
+        # self.displayed_favourites_count += self.display_next_batch(
+        #     self.wishlisted_sets,
+        #     self.displayed_favourites_count,
+        #     self.create_wishlist_set_widget,
+        #     5,
+        # )
+
+    def display_next_batch_wishlist(self):
+        """Display the next batch of sets."""
+        end_index = self.displayed_favourites_count + self.SET_DISPLAY_BATCH
+        column_count = 4
+
+        for i in range(
+            self.displayed_favourites_count, min(end_index, len(self.wishlisted_sets))
+        ):
+            set_info = self.wishlisted_sets[i]
+
+            set_instance = SetInfo(
+                set_id=set_info[0],
+                set_name=set_info[1],
+                set_img_url=set_info[2],
+                year=set_info[3],
+                pieces=set_info[4],
+            )
+
+            set_widget = self.create_wishlist_set_widget(
+                set_instance, set_notes=set_info[5]
+            )
+
+            self.grid_layout.addWidget(set_widget, self.current_row, self.current_col)
+            self.current_col += 1
+            if self.current_col >= column_count:
+                self.current_col = 0
+                self.current_row += 1
+
+        self.load_more_button.setVisible(end_index < len(self.wishlisted_sets))
+
+        self.displayed_favourites_count += end_index
 
     def display_next_batch(
         self, items_to_display, displayed_amount, widget_create_func, column_count=4
@@ -286,6 +326,90 @@ class MainWindow(QtWidgets.QWidget):
 
         return set_widget
 
+    def create_wishlist_set_widget(
+        self, set_data: SetInfo, set_notes: str = "really cool set!"
+    ) -> QtWidgets.QWidget:
+        """Create a widget for a single set."""
+        set_widget = QtWidgets.QWidget()
+        set_layout = QtWidgets.QVBoxLayout()
+        image_layout = QtWidgets.QHBoxLayout()
+        info_layout = QtWidgets.QVBoxLayout()
+        button_layout = QtWidgets.QVBoxLayout()
+
+        set_layout.addLayout(image_layout)
+        set_layout.addLayout(info_layout)
+        set_layout.addLayout(button_layout)
+        set_widget.setLayout(set_layout)
+
+        # Add shadow effect
+        shadow = QtWidgets.QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(10)
+        shadow.setOffset(2, 2)
+        set_widget.setGraphicsEffect(shadow)
+        set_widget.setStyleSheet("background-color: #1B1B1E;")
+
+        # Set details
+        set_name = QtWidgets.QLabel(f"📇 Name: {set_data.name}")
+        set_id = QtWidgets.QLabel(f"🪪 ID: {set_data.id}")
+        set_pieces = QtWidgets.QLabel(f"🧱 Bricks: {set_data.pieces}")
+
+        info_layout.addWidget(set_name)
+        info_layout.addWidget(set_id)
+        info_layout.addWidget(set_pieces)
+        self.style_card_info(info_layout)
+
+        # Set image
+        # set_image = self.load_set_image(set_data.image_url)
+        # image_layout.addWidget(set_image)
+
+        # Action buttons
+        detail_button = self.create_action_button(
+            "🔍 Detail",
+            lambda: self.show_wishlist_detail_dialog(set_data, notes=set_notes),
+        )
+        button_layout.addWidget(detail_button)
+
+        delete_button = self.create_action_button(
+            "❌ Delete",
+            lambda: self.remove_from_wishlist(set_id=set_data.id, widget=set_widget),
+        )
+        button_layout.addWidget(delete_button)
+
+        return set_widget
+
+    def remove_from_wishlist(self, set_id: str, widget: QtWidgets.QWidget):
+        """Remove a set from the wishlist."""
+        print(f"Removing set {set_id} from wishlist")
+        Model.remove_from_wishlist(set_id)
+        self.remove_widget(widget)
+
+    def remove_widget(self, widget: QtWidgets.QWidget):
+        """Remove a widget from the layout."""
+
+        widget.deleteLater()
+
+    def show_wishlist_detail_dialog(self, set_data: SetInfo, notes: str):
+        """Display the wishlist detail dialog."""
+        dialog = self.create_dialog("Wishlist Detail", 600, 400)
+        layout = dialog.layout()
+
+        set_name_label = QtWidgets.QLabel(f"Set Name: {set_data.name}")
+        set_id_label = QtWidgets.QLabel(f"Set ID: {set_data.id}")
+        set_notes = QtWidgets.QTextEdit()
+        set_notes.setPlainText(notes)
+
+        save_button = QtWidgets.QPushButton("Save")
+        save_button.clicked.connect(
+            lambda: self.add_to_favorite(set_data, set_notes.toPlainText(), dialog)
+        )
+
+        layout.addWidget(set_name_label)
+        layout.addWidget(set_id_label)
+        layout.addWidget(set_notes)
+        layout.addWidget(save_button)
+
+        dialog.exec()
+
     def load_set_image(self, image_url: str) -> QtWidgets.QLabel:
         """Load and return the set image."""
         set_image = QtWidgets.QLabel()
@@ -365,16 +489,13 @@ class MainWindow(QtWidgets.QWidget):
         """Load the wishlist view."""
         self.displayed_favourites_count = 0
         self.clear_main_layout()
-        # self.clear_grid_layout()
-
-        self.current_row = 0
-        self.current_col = 0
-
         self.setup_main_layout()
+
+        self.wishlisted_sets = Model.get_wishlist_data()
+
         self.load_title("Wishlist")
+        self.add_load_more_button(self.display_next_wishlist_batch)
         self.display_next_wishlist_batch()
-        self.load_more_button.clicked.disconnect()
-        self.load_more_button.clicked.connect(self.display_next_wishlist_batch)
         print("Loading wishlist")
 
     def load_collections(self):
@@ -393,14 +514,57 @@ class MainWindow(QtWidgets.QWidget):
         dialog = self.create_dialog("Favourite Window", 600, 400)
         layout = dialog.layout()
 
+        # Styling the dialog layout
+        dialog.setStyleSheet(
+            """
+            QDialog {
+                background-color: #2C2C2E;
+                border: 2px solid #555;
+                border-radius: 10px;
+                padding: 20px;
+            }
+            """
+        )
+
         # Create widgets
         set_name_label = QtWidgets.QLabel(f"Set Name: {set_name}")
-        set_id_label = QtWidgets.QLabel(f"Set ID: {set_id}")
-        set_notes = QtWidgets.QTextEdit()
-        save_button = QtWidgets.QPushButton("Save")
+        set_name_label.setStyleSheet(
+            "font-size: 18px; font-weight: bold; color: white;"
+        )
 
+        set_id_label = QtWidgets.QLabel(f"Set ID: {set_id}")
+        set_id_label.setStyleSheet("font-size: 16px; color: #BBB;")
+
+        set_notes = QtWidgets.QTextEdit()
+        set_notes.setStyleSheet(
+            """
+            QTextEdit {
+                background-color: #444;
+                color: white;
+                border: 1px solid #666;
+                border-radius: 5px;
+                padding: 10px;
+            }
+            """
+        )
         set_notes.setPlaceholderText("Add notes here")
 
+        save_button = QtWidgets.QPushButton("Save")
+        save_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #1E90FF;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                font-size: 16px;
+            }
+            QPushButton:hover {
+                background-color: #007ACC;
+            }
+            """
+        )
         save_button.clicked.connect(
             lambda: self.add_to_favorite(set_data, set_notes.toPlainText(), dialog)
         )
@@ -418,7 +582,7 @@ class MainWindow(QtWidgets.QWidget):
         print(f"Adding set {set_data.id} to favourites")
         print(f"Notes: {notes}")
 
-        Model.save_to_wishlist(set_data.id, notes)
+        Model.save_to_wishlist(set_data, notes)
         dialog.close()
 
     def display_collect_window(self, set_data: SetInfo):
