@@ -206,7 +206,7 @@ class MainWindow(QtWidgets.QWidget):
             )
 
             set_widget = self.create_wishlist_set_widget(
-                set_instance, set_notes=set_info[5]
+                set_instance, set_notes=set_info[6]
             )
 
             self.grid_layout.addWidget(set_widget, self.current_row, self.current_col)
