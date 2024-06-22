@@ -1,6 +1,5 @@
 import brickse
 
-
 def read_key() -> str | None:
     with open("./brickset_api_key.txt", "r") as f:
         return f.read().strip()
