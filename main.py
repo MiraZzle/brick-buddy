@@ -28,6 +28,7 @@ class MainWindow(QtWidgets.QWidget):
         # self.collections = ["My Collection", "Wishlist", "Favourites"]
 
         self.collections = Model.get_all_collections()
+        self.collection_names = [collection[0] for collection in self.collections]
         self.themes = get_themes()
 
         self.SET_DISPLAY_BATCH = 8
@@ -492,6 +493,9 @@ class MainWindow(QtWidgets.QWidget):
 
     def load_themes(self):
         """Load and display themes."""
+        self.collections = Model.get_all_collections()
+        self.collection_names = [collection[0] for collection in self.collections]
+
         self.clear_main_layout()
         # self.clear_grid_layout()
 
@@ -521,7 +525,9 @@ class MainWindow(QtWidgets.QWidget):
         """Load the collections view."""
         self.clear_main_layout()
         self.setup_main_layout()
+
         self.load_title("Collections")
+        self.ui_layout.addWidget(self.display_new_collection_button())
         print("Loading collections")
 
     def display_favourite_window(self, set_data: SetInfo):
@@ -617,8 +623,8 @@ class MainWindow(QtWidgets.QWidget):
         dropdown = QtWidgets.QComboBox()
         theme_label = QtWidgets.QLabel("Select Collection:")
 
-        dropdown.addItems(self.collections)
-        dropdown.setCurrentText(self.collections[0])
+        dropdown.addItems(self.collection_names)
+        dropdown.setCurrentText(self.collection_names[0])
 
         set_notes = QtWidgets.QTextEdit()
         set_notes.setPlaceholderText("Add notes here")
@@ -661,11 +667,70 @@ class MainWindow(QtWidgets.QWidget):
         dialog.setLayout(layout)
         return dialog
 
-    def display_collection_create_button(self):
+    def style_call_to_action_button(self, button: QtWidgets.QPushButton):
+        """Style the call to action button."""
+        button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #1E90FF;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                font-size: 16px;
+            }
+            QPushButton:hover {
+                background-color: #007ACC;
+            }
+        """
+        )
+
+    def display_new_collection_button(self):
         """Display the 'Create Collection' button."""
         create_button = QtWidgets.QPushButton("Create Collection")
-        create_button.clicked.connect(self.create_collection)
-        self.ui_layout.addWidget(create_button)
+        self.style_call_to_action_button(create_button)
+        create_button.clicked.connect(self.create_collection_dialog)
+        return create_button
+
+    def create_collection_dialog(self):
+        """Create a new collection."""
+        dialog = self.create_dialog("Create Collection", 600, 400)
+        layout = dialog.layout()
+
+        window_description = QtWidgets.QLabel("Create a new collection")
+        collection_name_input = QtWidgets.QLineEdit()
+        collection_name_input.setPlaceholderText("Enter collection name")
+
+        collection_description_input = QtWidgets.QTextEdit()
+        collection_description_input.setPlaceholderText("Enter collection description")
+
+        save_button = self.create_action_button(
+            "💾 Save collection",
+            lambda: self.save_collection(
+                collection_name_input.text(),
+                collection_description_input.toPlainText(),
+                dialog,
+            ),
+        )
+
+        layout.addWidget(window_description)
+        layout.addWidget(collection_name_input)
+        layout.addWidget(collection_description_input)
+        layout.addWidget(save_button)
+
+        dialog.exec()
+
+    def save_collection(self, name, description, dialog: QtWidgets.QDialog):
+        """Save the new collection."""
+        print(f"Saving collection: {name} - {description}")
+        Model.create_collection(name, description)
+        dialog.close()
+
+    def display_created_collections(self):
+        pass
+
+    def display_collection(self):
+        pass
 
 
 if __name__ == "__main__":

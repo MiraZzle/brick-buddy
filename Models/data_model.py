@@ -13,7 +13,7 @@ class Model:
     """
 
     @staticmethod
-    def create_collection(collection_name):
+    def create_collection(collection_name, collection_description):
         """
         Saves a new collection to the collections file.
 
@@ -49,7 +49,7 @@ class Model:
                 quotechar='"',
                 quoting=csv.QUOTE_MINIMAL,
             )
-            collections_writer.writerow([collection_name])
+            collections_writer.writerow([collection_name, collection_description])
 
     @staticmethod
     def save_collected_set(set_data: SetInfo, collection_name, notes):
@@ -123,7 +123,7 @@ class Model:
         with open(collections_file_path, mode="r") as collections_file:
             collections_reader = csv.reader(collections_file)
             next(collections_reader, None)  # Skip header
-            return [row[0] for row in collections_reader]
+            return [row for row in collections_reader]
 
     @staticmethod
     def get_collection_data(collection_name):
