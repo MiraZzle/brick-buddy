@@ -7,6 +7,17 @@ from Utils.api_requests import SetInfo
 DATA_DIRECTORY = "UserData"
 
 
+class CollectedSet:
+    """
+    A class representing a collected set.
+    """
+
+    def __init__(self, set_info, collection_name, notes):
+        self.set_info = set_info
+        self.collection_name = collection_name
+        self.notes = notes
+
+
 class Model:
     """
     A class representing a data model for managing collections, sets, and wishlist items.
@@ -111,6 +122,36 @@ class Model:
             )
 
     @staticmethod
+    def remove_from_collection(collection_name, set_id):
+        collections_file_path = f"./{DATA_DIRECTORY}/collected_sets.csv"
+        collection_data = Model.get_collection_data(collection_name, as_string=True)
+
+        with open(collections_file_path, mode="w", newline="") as collection_data_file:
+            collection_data_writer = csv.writer(
+                collection_data_file,
+                delimiter=",",
+                quotechar='"',
+                quoting=csv.QUOTE_MINIMAL,
+            )
+
+            collection_data_writer.writerow(
+                [
+                    "collection_name",
+                    "set_id",
+                    "name",
+                    "url",
+                    "brickset_url",
+                    "year",
+                    "pieces",
+                    "notes",
+                ]
+            )
+
+            for row in collection_data:
+                if row[1] != set_id:
+                    collection_data_writer.writerow(row)
+
+    @staticmethod
     def get_all_collections():
         """
         Retrieves all collection names.
@@ -128,7 +169,83 @@ class Model:
             return [row for row in collections_reader]
 
     @staticmethod
-    def get_collection_data(collection_name):
+    def update_wishlisted_set_notes(set_id, notes):
+        wishlist_file_path = f"./{DATA_DIRECTORY}/wishlist.csv"
+        wishlist_data = Model.get_wishlist_data()
+
+        with open(wishlist_file_path, mode="w", newline="") as wishlist_file:
+            wishlist_writer = csv.writer(
+                wishlist_file,
+                delimiter=",",
+                quotechar='"',
+                quoting=csv.QUOTE_MINIMAL,
+            )
+
+            wishlist_writer.writerow(
+                ["set_id", "name", "url", "brickset_url", "year", "pieces", "notes"]
+            )
+
+            for row in wishlist_data:
+                if row[0] != set_id:
+                    wishlist_writer.writerow(row)
+                else:
+                    wishlist_writer.writerow(
+                        [
+                            set_id,
+                            row[1],
+                            row[2],
+                            row[3],
+                            row[4],
+                            row[5],
+                            notes,
+                        ]
+                    )
+
+    @staticmethod
+    def update_collected_set_notes(collection_name, set_id, notes):
+        collections_file_path = f"./{DATA_DIRECTORY}/collected_sets.csv"
+        collection_data = Model.get_collection_data(collection_name)
+
+        with open(collections_file_path, mode="w", newline="") as collection_data_file:
+            collection_data_writer = csv.writer(
+                collection_data_file,
+                delimiter=",",
+                quotechar='"',
+                quoting=csv.QUOTE_MINIMAL,
+            )
+
+            collection_data_writer.writerow(
+                [
+                    "collection_name",
+                    "set_id",
+                    "name",
+                    "url",
+                    "brickset_url",
+                    "year",
+                    "pieces",
+                    "notes",
+                ]
+            )
+
+            for row in collection_data:
+                if row[1] != set_id:
+                    collection_data_writer.writerow(row)
+                else:
+                    collection_data_writer.writerow(
+                        [
+                            collection_name,
+                            set_id,
+                            row[2],
+                            row[3],
+                            row[4],
+                            row[5],
+                            row[6],
+                            notes,
+                        ]
+                    )
+
+    @staticmethod
+    def get_collection_data(collection_name, as_string=False):
         """
         Retrieves all sets in a specific collection.
 
@@ -145,11 +262,34 @@ class Model:
         with open(collected_sets_file_path, mode="r") as collection_data_file:
             collection_data_reader = csv.reader(collection_data_file)
             next(collection_data_reader, None)  # Skip header
+            if as_string:
+                return [
+                    row
+                    for row in collection_data_reader
+                    if row and row[0] == collection_name
+                ]
+
             return [
-                row
+                CollectedSet(SetInfo(*row[1:7]), row[0], row[7])
                 for row in collection_data_reader
                 if row and row[0] == collection_name
             ]
+
+    @staticmethod
+    def get_all_collected_sets():
+        """
+        Retrieves all collected sets.
+
+        Returns:
+            list: A list of collected sets.
+        """
+        collected_sets_file_path = f"./{DATA_DIRECTORY}/collected_sets.csv"
+        if not os.path.isfile(collected_sets_file_path):
+            return []
+
+        with open(collected_sets_file_path, mode="r") as collection_data_file:
+            collection_data_reader = csv.reader(collection_data_file)
+            return [row for row in collection_data_reader]
 
     @staticmethod
     def delete_collection(collection_name):
@@ -168,7 +308,7 @@ class Model:
                 quoting=csv.QUOTE_MINIMAL,
             )
 
-            collections_writer.writerow(["collection_name, collection_description"])
+            collections_writer.writerow(["collection_name", "collection_description"])
 
             for row in collections_data:
                 if row[0] != collection_name:
@@ -177,8 +317,8 @@ class Model:
                     print(f"Deleted collection {collection_name}")
 
         # Delete all collected sets from the collection
+        all_collected_sets = Model.get_all_collected_sets()
         collected_sets_file_path = f"./{DATA_DIRECTORY}/collected_sets.csv"
-        collected_sets_data = Model.get_collection_data(collection_name)
 
         with open(
             collected_sets_file_path, mode="w", newline=""
@@ -191,8 +331,8 @@ class Model:
                 quoting=csv.QUOTE_MINIMAL,
             )
 
-            for row in collected_sets_data:
-                if row[7] != collection_name:
+            for row in all_collected_sets:
+                if row[0] != collection_name:
                     collected_sets_writer.writerow(row)
 
     @staticmethod
