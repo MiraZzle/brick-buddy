@@ -3,7 +3,7 @@ import brickse
 from PyQt6 import QtWidgets, QtGui, QtCore
 import urllib.request
 
-from Models.data_model import Model
+from Models.data_model import Model, CollectedSet
 from Utils.api_requests import get_themes, get_sets_from_theme, SetInfo
 from Utils.api_setup import init_brickse
 
@@ -40,6 +40,8 @@ class MainWindow(QtWidgets.QWidget):
         self.displayed_sets_count = 0
         self.displayed_favourites_count = 0
         self.displayed_collections_count = 0
+        self.displayed_collected_sets_count = 0
+
         self.current_row = 0
         self.current_col = 0
 
@@ -185,6 +187,15 @@ class MainWindow(QtWidgets.QWidget):
         """Display the next batch of sets."""
         self.displayed_sets_count += self.display_next_batch(
             self.sets, self.displayed_sets_count, self.create_set_widget, 4
+        )
+
+    def display_next_collected_sets_batch(self):
+        """Display the next batch of collected sets."""
+        self.displayed_collected_sets_count += self.display_next_batch(
+            self.currently_selected_collection,
+            self.displayed_collected_sets_count,
+            self.display_collected_set_widget,
+            4,
         )
 
     def display_next_wishlist_batch(self):
@@ -450,7 +461,9 @@ class MainWindow(QtWidgets.QWidget):
 
         save_button = QtWidgets.QPushButton("Save")
         save_button.clicked.connect(
-            lambda: self.add_to_favorite(set_data, set_notes.toPlainText(), dialog)
+            lambda: self.update_wishlisted_set_notes(
+                set_data.id, set_notes.toPlainText(), dialog
+            )
         )
 
         layout.addWidget(set_name_label)
@@ -539,6 +552,8 @@ class MainWindow(QtWidgets.QWidget):
         self.add_load_more_button(self.display_next_sets_batch)
         self.load_sets_from_theme(self.current_theme)
 
+    # ============================ SCENES ============================#
+
     def load_wishlist(self):
         """Load the wishlist view."""
         self.displayed_favourites_count = 0
@@ -565,6 +580,20 @@ class MainWindow(QtWidgets.QWidget):
         self.add_load_more_button(self.display_next_collections_batch)
         self.display_next_collections_batch()
         print("Loading collections")
+
+    def display_sets_from_collection(self, collection_name, collection_description):
+        self.clear_main_layout()
+        self.setup_main_layout()
+
+        self.displayed_collected_sets_count = 0
+        self.currently_selected_collection = Model.get_collection_data(collection_name)
+
+        self.load_title(f"Collection: {collection_name}")
+        self.load_page_desccription(f"Description: {collection_description}")
+        self.add_load_more_button(self.display_next_collected_sets_batch)
+        self.display_next_collected_sets_batch()
+
+    # ============================ FAVOURITES ============================#
 
     def display_favourite_window(self, set_data: SetInfo):
         """Display the favourite window for a set."""
@@ -637,6 +666,13 @@ class MainWindow(QtWidgets.QWidget):
         layout.addWidget(save_button)
 
         dialog.exec()
+
+    def update_wishlisted_set_notes(self, set_id: str, notes: str, dialog):
+        """Update the notes for a wishlisted set."""
+        print(f"Updating notes for set {set_id}")
+        print(f"Notes: {notes}")
+        Model.update_wishlisted_set_notes(set_id, notes)
+        dialog.close()
 
     def add_to_favorite(self, set_data: SetInfo, notes: str, dialog: QtWidgets.QDialog):
         """Add a set to favourites."""
@@ -766,11 +802,6 @@ class MainWindow(QtWidgets.QWidget):
 
     # ============================ COLLECTIONS ============================#
 
-    def display_created_collections(self):
-        """Display the created collections."""
-
-        pass
-
     def create_collection_widget(self, collection_name, collection_description):
         """Show a collection card."""
         layout = QtWidgets.QVBoxLayout()
@@ -795,18 +826,114 @@ class MainWindow(QtWidgets.QWidget):
 
         return collection_widget
 
-    def display_sets_from_collection(self, collection_name, collection_description):
-        self.clear_main_layout()
-        self.setup_main_layout()
-
-        self.load_title(f"Collection: {collection_name}")
-        self.load_page_desccription(f"Description: {collection_description}")
-        self.add_load_more_button(self.display_next_sets_batch)
-
     def delete_collection(self, name, widget):
         print(f"Deleting collection: {name}")
         Model.delete_collection(name)
         self.remove_widget(widget)
+
+    def display_collected_set_edit_window(self, collected_set_info: CollectedSet):
+        """Display the edit window for a collected set."""
+        dialog = self.create_dialog("Edit Collection", 600, 400)
+        layout = dialog.layout()
+
+        set_name_label = QtWidgets.QLabel(
+            f"Set Name: {collected_set_info.set_info.name}"
+        )
+        set_id_label = QtWidgets.QLabel(f"Set ID: {collected_set_info.set_info.id}")
+        set_notes = QtWidgets.QTextEdit()
+        set_notes.setPlainText(collected_set_info.notes)
+
+        save_button = QtWidgets.QPushButton("Save")
+        save_button.clicked.connect(
+            lambda: self.update_collected_set(
+                collected_set_info, set_notes.toPlainText(), dialog
+            )
+        )
+
+        layout.addWidget(set_name_label)
+        layout.addWidget(set_id_label)
+        layout.addWidget(set_notes)
+        layout.addWidget(save_button)
+
+        dialog.exec()
+
+    def update_collected_set(
+        self, collected_set_info: CollectedSet, notes: str, dialog
+    ):
+        """Update the notes for a collected set."""
+        print(f"Updating notes for set {collected_set_info.set_info.id}")
+        print(f"Notes: {notes}")
+        Model.update_collected_set_notes(
+            collected_set_info.collection_name, collected_set_info.set_info.id, notes
+        )
+        dialog.close()
+
+    def remove_from_collection(self, collection_name, set_id, widget):
+        """Remove a set from a collection."""
+        print(f"Removing set {set_id} from collection {collection_name}")
+        self.remove_widget(widget)
+        Model.remove_from_collection(collection_name, set_id)
+
+    def display_collected_set_widget(self, collected_set_info: CollectedSet):
+        """Create a widget for a single set."""
+        set_widget = QtWidgets.QWidget()
+        set_layout = QtWidgets.QVBoxLayout()
+        image_layout = QtWidgets.QHBoxLayout()
+        info_layout = QtWidgets.QVBoxLayout()
+        button_layout = QtWidgets.QHBoxLayout()
+
+        set_layout.addLayout(image_layout)
+        set_layout.addLayout(info_layout)
+        set_layout.addLayout(button_layout)
+        set_widget.setLayout(set_layout)
+
+        # Add shadow effect
+        shadow = QtWidgets.QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(10)
+        shadow.setOffset(2, 2)
+        set_widget.setGraphicsEffect(shadow)
+        set_widget.setStyleSheet("background-color: #1B1B1E;")
+
+        # Set details
+        set_name = QtWidgets.QLabel(f"📇 Name: {collected_set_info.set_info.name}")
+        set_id = QtWidgets.QLabel(f"🪪 ID: {collected_set_info.set_info.id}")
+        set_pieces = QtWidgets.QLabel(
+            f"🧱 Bricks: {collected_set_info.set_info.pieces}"
+        )
+        set_url = QtWidgets.QLabel(
+            f"🔗 Brickset URL: {collected_set_info.set_info.brickset_url}"
+        )
+        set_notes = QtWidgets.QLabel(f"📝 Notes: {collected_set_info.notes}")
+
+        info_layout.addWidget(set_name)
+        info_layout.addWidget(set_id)
+        info_layout.addWidget(set_pieces)
+        info_layout.addWidget(set_url)
+        info_layout.addWidget(set_notes)
+
+        self.style_card_info(info_layout)
+
+        # Set image
+        set_image = self.load_set_image(collected_set_info.set_info.image_url)
+        image_layout.addWidget(set_image)
+
+        # Action buttons
+        wishlist_button = self.create_action_button(
+            "❌ Remove",
+            lambda: self.remove_from_collection(
+                collected_set_info.collection_name,
+                collected_set_info.set_info.id,
+                set_widget,
+            ),
+        )
+        add_to_collection_button = self.create_action_button(
+            "✏️ Edit", lambda: self.display_collect_window(collected_set_info.set_info)
+        )
+
+        button_layout.addWidget(add_to_collection_button)
+        button_layout.addWidget(wishlist_button)
+
+        return set_widget
 
 
 if __name__ == "__main__":
