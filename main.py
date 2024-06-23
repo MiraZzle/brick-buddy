@@ -38,6 +38,7 @@ class MainWindow(QtWidgets.QWidget):
 
         self.displayed_sets_count = 0
         self.displayed_favourites_count = 0
+        self.displayed_collections_count = 0
         self.current_row = 0
         self.current_col = 0
 
@@ -180,12 +181,32 @@ class MainWindow(QtWidgets.QWidget):
     def display_next_wishlist_batch(self):
         """Display the next batch of favourites."""
         self.display_next_batch_wishlist()
-        # self.displayed_favourites_count += self.display_next_batch(
-        #     self.wishlisted_sets,
-        #     self.displayed_favourites_count,
-        #     self.create_wishlist_set_widget,
-        #     5,
-        # )
+
+    def display_next_collections_batch(self):
+        """Display the next batch of collections."""
+        end_index = self.displayed_collections_count + self.SET_DISPLAY_BATCH
+        column_count = 1
+
+        for i in range(
+            self.displayed_collections_count, min(end_index, len(self.collections))
+        ):
+            collection_info = self.collections[i]
+
+            collection_widget = self.create_collection_widget(
+                collection_info[0], collection_info[1]
+            )
+
+            self.grid_layout.addWidget(
+                collection_widget, self.current_row, self.current_col
+            )
+            self.current_col += 1
+            if self.current_col >= column_count:
+                self.current_col = 0
+                self.current_row += 1
+
+        self.load_more_button.setVisible(end_index < len(self.collections))
+
+        self.displayed_collections_count += end_index
 
     def display_next_batch_wishlist(self):
         """Display the next batch of sets."""
@@ -496,6 +517,7 @@ class MainWindow(QtWidgets.QWidget):
         self.collections = Model.get_all_collections()
         self.collection_names = [collection[0] for collection in self.collections]
 
+        self.displayed_sets_count = 0
         self.clear_main_layout()
         # self.clear_grid_layout()
 
@@ -523,11 +545,16 @@ class MainWindow(QtWidgets.QWidget):
 
     def load_collections(self):
         """Load the collections view."""
+        self.collections = Model.get_all_collections()
+        self.collection_names = [collection[0] for collection in self.collections]
+        self.displayed_collections_count = 0
         self.clear_main_layout()
         self.setup_main_layout()
 
         self.load_title("Collections")
         self.ui_layout.addWidget(self.display_new_collection_button())
+        self.add_load_more_button(self.display_next_collections_batch)
+        self.display_next_collections_batch()
         print("Loading collections")
 
     def display_favourite_window(self, set_data: SetInfo):
@@ -726,11 +753,44 @@ class MainWindow(QtWidgets.QWidget):
         Model.create_collection(name, description)
         dialog.close()
 
+    # ============================ COLLECTIONS ============================#
+
     def display_created_collections(self):
+        """Display the created collections."""
+
         pass
 
-    def display_collection(self):
-        pass
+    def create_collection_widget(self, collection_name, collection_description):
+        """Show a collection card."""
+        layout = QtWidgets.QVBoxLayout()
+        collection_widget = QtWidgets.QWidget()
+        collection_widget.setLayout(layout)
+
+        collection_name_label = QtWidgets.QLabel(collection_name)
+        delete_button = self.create_action_button(
+            "❌ Delete",
+            lambda: self.delete_collection(collection_name, collection_widget),
+        )
+        view_button = self.create_action_button(
+            "🔍 View", lambda: self.display_sets_from_collection(collection_name)
+        )
+
+        layout.addWidget(collection_name_label)
+        layout.addWidget(view_button)
+        layout.addWidget(delete_button)
+
+        return collection_widget
+
+    def display_sets_from_collection(self, collection_name):
+        self.clear_main_layout()
+        self.setup_main_layout()
+
+        self.load_title(f"Collection: {collection_name}")
+
+    def delete_collection(self, name, widget):
+        print(f"Deleting collection: {name}")
+        Model.delete_collection(name)
+        self.remove_widget(widget)
 
 
 if __name__ == "__main__":

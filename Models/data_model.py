@@ -150,6 +150,50 @@ class Model:
             ]
 
     @staticmethod
+    def delete_collection(collection_name):
+        """
+        Deletes a collection from the collections file.
+        """
+        collections_file_path = f"./{DATA_DIRECTORY}/collections.csv"
+        collections_data = Model.get_all_collections()
+
+        # Delete collection from collections file
+        with open(collections_file_path, mode="w", newline="") as collections_file:
+            collections_writer = csv.writer(
+                collections_file,
+                delimiter=",",
+                quotechar='"',
+                quoting=csv.QUOTE_MINIMAL,
+            )
+
+            collections_writer.writerow(["collection_name"])
+
+            for row in collections_data:
+                if row[0] != collection_name:
+                    collections_writer.writerow(row)
+                else:
+                    print(f"Deleted collection {collection_name}")
+
+        # Delete all collected sets from the collection
+        collected_sets_file_path = f"./{DATA_DIRECTORY}/collected_sets.csv"
+        collected_sets_data = Model.get_collection_data(collection_name)
+
+        with open(
+            collected_sets_file_path, mode="w", newline=""
+        ) as collection_data_file:
+
+            collected_sets_writer = csv.writer(
+                collection_data_file,
+                delimiter=",",
+                quotechar='"',
+                quoting=csv.QUOTE_MINIMAL,
+            )
+
+            for row in collected_sets_data:
+                if row[7] != collection_name:
+                    collected_sets_writer.writerow(row)
+
+    @staticmethod
     def get_wishlist_data():
         """
         Retrieves all wishlist items.
