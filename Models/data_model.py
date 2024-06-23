@@ -204,7 +204,7 @@ class Model:
     @staticmethod
     def update_collected_set_notes(collection_name, set_id, notes):
         collections_file_path = f"./{DATA_DIRECTORY}/collected_sets.csv"
-        collection_data = Model.get_collection_data(collection_name)
+        collection_data = Model.get_collection_data(collection_name, as_string=True)
 
         with open(collections_file_path, mode="w", newline="") as collection_data_file:
             collection_data_writer = csv.writer(

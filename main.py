@@ -900,9 +900,11 @@ class MainWindow(QtWidgets.QWidget):
         set_pieces = QtWidgets.QLabel(
             f"🧱 Bricks: {collected_set_info.set_info.pieces}"
         )
+
         set_url = QtWidgets.QLabel(
-            f"🔗 Brickset URL: {collected_set_info.set_info.brickset_url}"
+            f"🔗 <a href='{collected_set_info.set_info.brickset_url}'>Brickset link</a>"
         )
+        set_url.setOpenExternalLinks(True)
         set_notes = QtWidgets.QLabel(f"📝 Notes: {collected_set_info.notes}")
 
         info_layout.addWidget(set_name)
@@ -927,7 +929,8 @@ class MainWindow(QtWidgets.QWidget):
             ),
         )
         add_to_collection_button = self.create_action_button(
-            "✏️ Edit", lambda: self.display_collect_window(collected_set_info.set_info)
+            "✏️ Edit",
+            lambda: self.display_collected_set_edit_window(collected_set_info),
         )
 
         button_layout.addWidget(add_to_collection_button)
