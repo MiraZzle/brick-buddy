@@ -35,6 +35,7 @@ class MainWindow(QtWidgets.QWidget):
         self.current_theme = "Bricklink"
         self.sets = []
         self.wishlisted_sets = Model.get_wishlist_data()
+        self.currently_selected_collection = []
 
         self.displayed_sets_count = 0
         self.displayed_favourites_count = 0
@@ -130,6 +131,14 @@ class MainWindow(QtWidgets.QWidget):
         welcome_label.setStyleSheet("font-size: 24px; font-weight: bold;")
 
         self.ui_layout.addWidget(welcome_label)
+
+    def load_page_desccription(self, description: str):
+        """Load and display the page description."""
+        description_label = QtWidgets.QLabel(description)
+        description_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
+        description_label.setStyleSheet("font-size: 16px; color: #BBB;")
+
+        self.ui_layout.addWidget(description_label)
 
     def load_theme_dropdown(self):
         """Load and display the theme dropdown."""
@@ -683,6 +692,7 @@ class MainWindow(QtWidgets.QWidget):
         print(f"Adding set {set_data.id} to collection")
         print(f"Notes: {notes}")
         print(f"Collection: {collection_name}")
+        Model.save_collected_set(set_data, collection_name, notes)
         dialog.close()
 
     def create_dialog(self, title: str, width: int, height: int) -> QtWidgets.QDialog:
@@ -752,6 +762,7 @@ class MainWindow(QtWidgets.QWidget):
         print(f"Saving collection: {name} - {description}")
         Model.create_collection(name, description)
         dialog.close()
+        self.load_collections()
 
     # ============================ COLLECTIONS ============================#
 
@@ -772,7 +783,10 @@ class MainWindow(QtWidgets.QWidget):
             lambda: self.delete_collection(collection_name, collection_widget),
         )
         view_button = self.create_action_button(
-            "🔍 View", lambda: self.display_sets_from_collection(collection_name)
+            "🔍 View",
+            lambda: self.display_sets_from_collection(
+                collection_name, collection_description
+            ),
         )
 
         layout.addWidget(collection_name_label)
@@ -781,11 +795,13 @@ class MainWindow(QtWidgets.QWidget):
 
         return collection_widget
 
-    def display_sets_from_collection(self, collection_name):
+    def display_sets_from_collection(self, collection_name, collection_description):
         self.clear_main_layout()
         self.setup_main_layout()
 
         self.load_title(f"Collection: {collection_name}")
+        self.load_page_desccription(f"Description: {collection_description}")
+        self.add_load_more_button(self.display_next_sets_batch)
 
     def delete_collection(self, name, widget):
         print(f"Deleting collection: {name}")

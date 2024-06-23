@@ -33,7 +33,9 @@ class Model:
 
             # Write header if file does not exist
             if not file_exists:
-                collections_writer.writerow(["collection_name"])
+                collections_writer.writerow(
+                    ["collection_name", "collection_description"]
+                )
 
         with open(collections_file_path, mode="r", newline="") as collections_file:
             collections_reader = csv.reader(collections_file)
@@ -166,7 +168,7 @@ class Model:
                 quoting=csv.QUOTE_MINIMAL,
             )
 
-            collections_writer.writerow(["collection_name"])
+            collections_writer.writerow(["collection_name, collection_description"])
 
             for row in collections_data:
                 if row[0] != collection_name:
