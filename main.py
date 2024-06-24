@@ -1,5 +1,3 @@
-import json
-import brickse
 from PyQt6 import QtWidgets, QtGui, QtCore
 import urllib.request
 
@@ -7,20 +5,21 @@ from Models.data_model import Model, CollectedSet
 from Utils.api_requests import get_themes, get_sets_from_theme, SetInfo
 from Utils.api_setup import init_brickse
 
-
-# Constants
 WINDOW_TITLE = "BrickBuddy"
+DEFAULT_THEME = "Bricklink"
+
+# Window dimensions
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
+DIALOG_WIDTH = 600
+DIALOG_HEIGHT = 400
 NAVBAR_WIDTH = 200
-DEFAULT_THEME = "Bricklink"
+
+# Styling
 SET_DISPLAY_BATCH = 8
 COLUMN_COUNT_COLLECTIONS = 4
 BUTTON_FONT_SIZE = 14
 PRIMARY_FONT_SIZE = 14
-
-DIALOG_WIDTH = 600
-DIALOG_HEIGHT = 400
 
 # Colors
 PRIMARY_TEXT_COLOR = "white"
