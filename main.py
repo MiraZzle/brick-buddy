@@ -171,6 +171,7 @@ class MainWindow(QtWidgets.QWidget):
     def load_page_description(self, description: str) -> None:
         """Load and display the page description."""
         description_label = self.create_info_label(description)
+        description_label.setWordWrap(True)
         description_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
 
         self.ui_layout.addWidget(description_label)
@@ -1095,6 +1096,7 @@ class MainWindow(QtWidgets.QWidget):
         set_layout.addLayout(info_layout)
         set_layout.addLayout(button_layout)
         set_widget.setLayout(set_layout)
+        set_widget.setStyleSheet(f"background-color: {SET_WIDGET_BACKGROUND_COLOR};")
 
         # Add shadow effect
         self.add_shadow_effect(set_widget)
