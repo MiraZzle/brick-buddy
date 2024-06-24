@@ -5,4 +5,3 @@
 <p align="center">
    <b>BrickBuddy </b> is a desktop Lego app for creating <br> and managing wishlists and collection.
 </p>
-  
