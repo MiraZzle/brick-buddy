@@ -32,11 +32,9 @@ def get_sets_from_theme(theme: str) -> list[str]:
         set_img_url = set.get("image", {}).get("imageURL", default_img_url)
 
         set_info = SetInfo(set_id, set_name, set_img_url, brickset_url, year, pieces)
-
         sets.append(set_info)
 
     return sets
-
 
 class SetInfo:
     def __init__(
