@@ -13,6 +13,9 @@ WINDOW_TITLE = "BrickBuddy"
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 NAVBAR_WIDTH = 200
+DEFAULT_THEME = "Bricklink"
+SET_DISPLAY_BATCH = 8
+COLUMN_COUNT_COLLECTIONS = 4
 
 # Colors
 BACKGROUND_COLOR = "#333"
@@ -24,62 +27,76 @@ class MainWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
 
-        # Initial setup
-        # self.collections = ["My Collection", "Wishlist", "Favourites"]
-
-        self.collections = Model.get_all_collections()
-        self.collection_names = [collection[0] for collection in self.collections]
-        self.themes = get_themes()
-
-        self.SET_DISPLAY_BATCH = 8
-        self.current_theme = "Bricklink"
-        self.sets = []
-        self.wishlisted_sets = Model.get_wishlist_data()
-        self.currently_selected_collection = []
-
-        self.displayed_sets_count = 0
-        self.displayed_favourites_count = 0
-        self.displayed_collections_count = 0
-        self.displayed_collected_sets_count = 0
-
-        self.current_row = 0
-        self.current_col = 0
-
+        self.setup_default_values()
+        self.setup_set_informations()
+        self.setup_set_informations()
+        self.setup_counts()
         self.setup_window()
         self.load_navbar()
         self.setup_main_layout()
-
         self.load_themes()
 
-        # Start with default theme
         self.select_default_theme(self.current_theme)
 
-    def setup_window(self):
+    # ============================ SETUP ============================#
+
+    def setup_default_values(self):
+        """Setup default values for the application."""
+        self.SET_DISPLAY_BATCH = 8
+        self.current_theme = "Bricklink"
+
+    def setup_set_informations(self):
+        """Setup information about sets, collections, and themes."""
+        self.collections = Model.get_all_collections()
+        self.collection_names = [collection[0] for collection in self.collections]
+        self.themes = get_themes()
+        self.wishlisted_sets = Model.get_wishlist_data()
+        self.sets = []
+        self.currently_selected_collection = []
+
+    def setup_counts(self) -> None:
+        """Setup the counts for the displayed items."""
+        self.displayed_sets_count = 0
+        self.displayed_wishlist_items_count = 0
+        self.displayed_collections_count = 0
+        self.displayed_collected_sets_count = 0
+        self.current_row = 0
+        self.current_col = 0
+
+    def setup_window(self) -> None:
         """Setup the main window properties."""
         self.setWindowTitle(WINDOW_TITLE)
         self.setGeometry(100, 100, WINDOW_WIDTH, WINDOW_HEIGHT)
         self.layout = QtWidgets.QHBoxLayout()
         self.setLayout(self.layout)
 
-    def setup_main_layout(self):
+    def setup_main_layout(self) -> None:
         """Setup the main layout of the window."""
+        # Layouts
         self.main_layout = QtWidgets.QVBoxLayout()
         self.ui_layout = QtWidgets.QVBoxLayout()
-        self.scroll_area = QtWidgets.QScrollArea()
-        self.scroll_content = QtWidgets.QWidget()
         self.scroll_layout = QtWidgets.QVBoxLayout()
         self.grid_layout = QtWidgets.QGridLayout()
 
+        # Scroll area - for inidividual set widgets
+        self.scroll_area = QtWidgets.QScrollArea()
+        self.scroll_content = QtWidgets.QWidget()
+
+        # Add layouts to the main layout
         self.layout.addLayout(self.main_layout)
         self.main_layout.addLayout(self.ui_layout)
-        self.scroll_area.setWidgetResizable(True)
-        self.main_layout.addWidget(self.scroll_area)
+
         self.scroll_area.setWidget(self.scroll_content)
         self.scroll_layout.setSpacing(24)
+        self.scroll_area.setWidgetResizable(True)
+
+        self.main_layout.addWidget(self.scroll_area)
         self.scroll_layout.addLayout(self.grid_layout)
         self.scroll_content.setLayout(self.scroll_layout)
 
-    def load_navbar(self):
+    # ============================ UI ELEMENTS ============================#
+
+    def load_navbar(self) -> None:
         """Setup the navigation bar."""
         self.navbar_layout = QtWidgets.QVBoxLayout()
         self.navbar_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
@@ -87,9 +104,17 @@ class MainWindow(QtWidgets.QWidget):
         # Create a widget for the navbar layout - main container
         self.navbar_widget = QtWidgets.QWidget()
         self.navbar_widget.setLayout(self.navbar_layout)
-        self.navbar_widget.setFixedWidth(NAVBAR_WIDTH)
-        self.navbar_widget.setStyleSheet("background-color: #333;")
+        self.navbar_widget.setFixedWidth(NAVBAR_WIDTH)  # Set fixed width for the navbar
+        self.navbar_widget.setStyleSheet(f"background-color: {BACKGROUND_COLOR};")
 
+        self.add_navbar_buttons()
+
+        # Add navbar_widget to the main layout
+        self.layout.addWidget(self.navbar_widget)
+
+    def add_navbar_buttons(self) -> None:
+        """Add navigation buttons to the navbar."""
+        # Create navigation buttons and connect them
         self.home_button = self.create_nav_button("🏠 Home", self.load_themes)
         self.wishlist_button = self.create_nav_button("⭐ Wishlist", self.load_wishlist)
         self.collections_button = self.create_nav_button(
@@ -101,13 +126,9 @@ class MainWindow(QtWidgets.QWidget):
         self.navbar_layout.addWidget(self.wishlist_button)
         self.navbar_layout.addWidget(self.collections_button)
 
-        # Add navbar_widget to the main layout
-        self.layout.addWidget(self.navbar_widget)
-
     def create_nav_button(self, text: str, callback: callable) -> QtWidgets.QPushButton:
         """Helper function to create styled navigation buttons."""
         button = QtWidgets.QPushButton(text)
-        # Add functionality to the button
         button.clicked.connect(callback)
         button.setStyleSheet(
             """
@@ -125,16 +146,20 @@ class MainWindow(QtWidgets.QWidget):
         )
         return button
 
-    def load_title(self, title: str):
+    # ============================ LOADING ============================#
+
+    def load_title(self, title: str) -> None:
         """Load and display the title."""
         welcome_label = QtWidgets.QLabel(title)
 
         welcome_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
-        welcome_label.setStyleSheet("font-size: 24px; font-weight: bold;")
+        welcome_label.setStyleSheet(
+            "font-size: 24px; font-weight: bold;"
+        )  # Style the title
 
         self.ui_layout.addWidget(welcome_label)
 
-    def load_page_desccription(self, description: str):
+    def load_page_description(self, description: str) -> None:
         """Load and display the page description."""
         description_label = QtWidgets.QLabel(description)
         description_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
@@ -142,51 +167,76 @@ class MainWindow(QtWidgets.QWidget):
 
         self.ui_layout.addWidget(description_label)
 
-    def load_theme_dropdown(self):
+    def load_dropdown_label(self) -> None:
+        """Load and display a dropdown label."""
+        dropdown_label = QtWidgets.QLabel("Select Theme:")
+        dropdown_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
+        dropdown_label.setStyleSheet("font-size: 16px; color: #BBB;")
+
+        self.title_layout.addWidget(dropdown_label)
+
+    def load_theme_dropdown(self) -> None:
         """Load and display the theme dropdown."""
-        self.theme_dropdown = QtWidgets.QComboBox()
-        self.theme_dropdown.addItems(self.themes)
-        self.theme_dropdown.setCurrentText(self.current_theme)
-        self.theme_dropdown.currentIndexChanged.connect(self.theme_changed)
-
-        # Title label
-        self.title_label = QtWidgets.QLabel("Select Theme:")
-        self.title_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
-
-        # Create a layout for the title and dropdown
         self.title_layout = QtWidgets.QHBoxLayout()
-        self.title_layout.addWidget(self.title_label)
-        self.title_layout.addWidget(self.theme_dropdown)
+        self.theme_dropdown = QtWidgets.QComboBox()
 
+        self.theme_dropdown.addItems(self.themes)  # Populate the dropdown with themes
+        self.theme_dropdown.setCurrentText(self.current_theme)  # Set the default theme
+        self.theme_dropdown.currentIndexChanged.connect(
+            self.theme_changed
+        )  # Signal when user changes the theme
+
+        self.title_layout.addWidget(self.theme_dropdown)
+        self.load_dropdown_label()
         self.ui_layout.addLayout(self.title_layout)
 
-    def theme_changed(self):
-        """Handle theme change event."""
-        selected_theme = self.theme_dropdown.currentText()
-        print(f"Selected theme: {selected_theme}")
-        self.current_theme = selected_theme
+    def theme_changed(self) -> None:
+        """Handle user changing the theme in dropdown."""
+        selected_theme = self.theme_dropdown.currentText()  # Get the selected theme
+        self.current_theme = selected_theme  # Update the current theme
+
+        # Clear the grid layout and load sets from the selected theme
         self.clear_grid_layout()
         self.current_row = 0
         self.current_col = 0
-        print(self.current_row, self.current_col)
+
+        # Load sets from the selected theme
         self.load_sets_from_theme(selected_theme)
 
-    def select_default_theme(self, theme_name: str):
-        """Select the default theme in the dropdown."""
+    def select_default_theme(self, theme_name: str) -> None:
+        """Select the default theme in the dropdown.
+
+        Args:
+            theme_name (str): The name of the theme to select."""
         index = self.theme_dropdown.findText(theme_name)
-        if index != -1:
+        if index != -1:  # If the theme is found
             self.theme_dropdown.setCurrentIndex(index)
 
-    def load_sets_from_theme(self, theme: str):
-        """Load sets from the selected theme."""
-        self.sets = get_sets_from_theme(theme)
-        self.displayed_sets_count = 0
-        self.display_next_sets_batch()
+    def load_sets_from_theme(self, theme: str) -> None:
+        """Load and display sets from the selected theme.
 
-    def display_next_sets_batch(self):
-        """Display the next batch of sets."""
+        Args:
+            theme (str): The selected theme."""
+        self.sets = get_sets_from_theme(theme)  # Update the sets
+        self.displayed_sets_count = 0
+        self.display_next_sets_batch()  # Display first batch of sets
+
+    # ============================ BATCH DISPLAYING ============================#
+
+    def display_next_sets_batch(self) -> None:
+        """Display the next batch of sets from current theme."""
         self.displayed_sets_count += self.display_next_batch(
             self.sets, self.displayed_sets_count, self.create_set_widget, 4
+        )
+
+    def display_next_wishlist_batch(self) -> None:
+        """Display the next batch of wishlisted sets."""
+        print(self.displayed_wishlist_items_count)
+        self.displayed_wishlist_items_count += self.display_next_batch(
+            self.wishlisted_sets,
+            self.displayed_wishlist_items_count,
+            self.create_wishlist_set_widget,
+            2,
         )
 
     def display_next_collected_sets_batch(self):
@@ -198,73 +248,22 @@ class MainWindow(QtWidgets.QWidget):
             4,
         )
 
-    def display_next_wishlist_batch(self):
-        """Display the next batch of favourites."""
-        self.display_next_batch_wishlist()
-
-    def display_next_collections_batch(self):
-        """Display the next batch of collections."""
-        end_index = self.displayed_collections_count + self.SET_DISPLAY_BATCH
-        column_count = 1
-
-        for i in range(
-            self.displayed_collections_count, min(end_index, len(self.collections))
-        ):
-            collection_info = self.collections[i]
-
-            collection_widget = self.create_collection_widget(
-                collection_info[0], collection_info[1]
-            )
-
-            self.grid_layout.addWidget(
-                collection_widget, self.current_row, self.current_col
-            )
-            self.current_col += 1
-            if self.current_col >= column_count:
-                self.current_col = 0
-                self.current_row += 1
-
-        self.load_more_button.setVisible(end_index < len(self.collections))
-
-        self.displayed_collections_count += end_index
-
-    def display_next_batch_wishlist(self):
-        """Display the next batch of sets."""
-        end_index = self.displayed_favourites_count + self.SET_DISPLAY_BATCH
-        column_count = 1
-
-        for i in range(
-            self.displayed_favourites_count, min(end_index, len(self.wishlisted_sets))
-        ):
-            set_info = self.wishlisted_sets[i]
-
-            set_instance = SetInfo(
-                set_id=set_info[0],
-                set_name=set_info[1],
-                set_img_url=set_info[2],
-                brickset_url=set_info[3],
-                year=set_info[4],
-                pieces=set_info[5],
-            )
-
-            set_widget = self.create_wishlist_set_widget(
-                set_instance, set_notes=set_info[6]
-            )
-
-            self.grid_layout.addWidget(set_widget, self.current_row, self.current_col)
-            self.current_col += 1
-            if self.current_col >= column_count:
-                self.current_col = 0
-                self.current_row += 1
-
-        self.load_more_button.setVisible(end_index < len(self.wishlisted_sets))
-
-        self.displayed_favourites_count += end_index
+    def display_next_batch_of_collections(self):
+        self.displayed_collections_count += self.display_next_batch(
+            self.collections,
+            self.displayed_collections_count,
+            self.create_collection_widget,
+            1,
+        )
 
     def display_next_batch(
-        self, items_to_display, displayed_amount, widget_create_func, column_count=4
-    ):
-        """Display the next batch of sets."""
+        self,
+        items_to_display: list,
+        displayed_amount: int,
+        widget_create_func: callable,
+        column_count: int = 4,
+    ) -> int:
+        """Display the next batch of widgets using the specified widget creation callback."""
         end_index = displayed_amount + self.SET_DISPLAY_BATCH
 
         for i in range(displayed_amount, min(end_index, len(items_to_display))):
@@ -277,8 +276,9 @@ class MainWindow(QtWidgets.QWidget):
                 self.current_row += 1
 
         self.load_more_button.setVisible(end_index < len(items_to_display))
-
         return end_index
+
+    # ============================ WIDGETS ============================#
 
     def add_load_more_button(self, display_func):
         """Add the 'Load More' button."""
@@ -369,9 +369,18 @@ class MainWindow(QtWidgets.QWidget):
 
         return set_widget
 
-    def create_wishlist_set_widget(
-        self, set_data: SetInfo, set_notes: str = "really cool set!"
-    ) -> QtWidgets.QWidget:
+    def create_wishlist_set_widget(self, set_info) -> QtWidgets.QWidget:
+        set_data = SetInfo(
+            set_id=set_info[0],
+            set_name=set_info[1],
+            set_img_url=set_info[2],
+            brickset_url=set_info[3],
+            year=set_info[4],
+            pieces=set_info[5],
+        )
+
+        set_notes = set_info[6]
+
         """Create a widget for a single set."""
         set_widget = QtWidgets.QWidget()
         set_layout = QtWidgets.QHBoxLayout()
@@ -556,7 +565,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def load_wishlist(self):
         """Load the wishlist view."""
-        self.displayed_favourites_count = 0
+        self.displayed_wishlist_items_count = 0
         self.clear_main_layout()
         self.setup_main_layout()
 
@@ -565,7 +574,6 @@ class MainWindow(QtWidgets.QWidget):
         self.load_title("Wishlist")
         self.add_load_more_button(self.display_next_wishlist_batch)
         self.display_next_wishlist_batch()
-        print("Loading wishlist")
 
     def load_collections(self):
         """Load the collections view."""
@@ -577,8 +585,8 @@ class MainWindow(QtWidgets.QWidget):
 
         self.load_title("Collections")
         self.ui_layout.addWidget(self.display_new_collection_button())
-        self.add_load_more_button(self.display_next_collections_batch)
-        self.display_next_collections_batch()
+        self.add_load_more_button(self.display_next_batch_of_collections)
+        self.display_next_batch_of_collections()
         print("Loading collections")
 
     def display_sets_from_collection(self, collection_name, collection_description):
@@ -589,7 +597,7 @@ class MainWindow(QtWidgets.QWidget):
         self.currently_selected_collection = Model.get_collection_data(collection_name)
 
         self.load_title(f"Collection: {collection_name}")
-        self.load_page_desccription(f"Description: {collection_description}")
+        self.load_page_description(f"Description: {collection_description}")
         self.add_load_more_button(self.display_next_collected_sets_batch)
         self.display_next_collected_sets_batch()
 
@@ -802,8 +810,11 @@ class MainWindow(QtWidgets.QWidget):
 
     # ============================ COLLECTIONS ============================#
 
-    def create_collection_widget(self, collection_name, collection_description):
+    def create_collection_widget(self, collection_info: tuple):
         """Show a collection card."""
+        collection_name = collection_info[0]
+        collection_description = collection_info[1]
+
         layout = QtWidgets.QVBoxLayout()
         collection_widget = QtWidgets.QWidget()
         collection_widget.setLayout(layout)
