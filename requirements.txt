@@ -1,1 +1,2 @@
 brickse
+PyQt6
