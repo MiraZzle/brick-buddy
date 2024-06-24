@@ -24,7 +24,7 @@ def get_sets_from_theme(theme: str) -> list[str]:
 
     raw_sets = json.loads(brickse.lego.get_sets(theme=theme).read())
 
-    # print(raw_sets)
+    print("api request")
 
     sets = []
     placeholder_sets = []

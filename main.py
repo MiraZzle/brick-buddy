@@ -16,8 +16,14 @@ NAVBAR_WIDTH = 200
 DEFAULT_THEME = "Bricklink"
 SET_DISPLAY_BATCH = 8
 COLUMN_COUNT_COLLECTIONS = 4
+BUTTON_FONT_SIZE = 14
+PRIMARY_FONT_SIZE = 14
+
+DIALOG_WIDTH = 600
+DIALOG_HEIGHT = 400
 
 # Colors
+PRIMARY_TEXT_COLOR = "white"
 BACKGROUND_COLOR = "#333"
 HOVER_COLOR = "#555"
 TEXT_COLOR = "white"
@@ -34,8 +40,7 @@ class MainWindow(QtWidgets.QWidget):
         self.setup_window()
         self.load_navbar()
         self.setup_main_layout()
-        self.load_themes()
-
+        self.load_theme_selection_view(update_sets=True)
         self.select_default_theme(self.current_theme)
 
     # ============================ SETUP ============================#
@@ -115,10 +120,14 @@ class MainWindow(QtWidgets.QWidget):
     def add_navbar_buttons(self) -> None:
         """Add navigation buttons to the navbar."""
         # Create navigation buttons and connect them
-        self.home_button = self.create_nav_button("🏠 Home", self.load_themes)
-        self.wishlist_button = self.create_nav_button("⭐ Wishlist", self.load_wishlist)
+        self.home_button = self.create_nav_button(
+            "🏠 Home", self.load_theme_selection_view
+        )
+        self.wishlist_button = self.create_nav_button(
+            "⭐ Wishlist", self.load_wishlist_view
+        )
         self.collections_button = self.create_nav_button(
-            "📋 Collections", self.load_collections
+            "📋 Collections", self.load_collections_view
         )
 
         # Add buttons to the navbar layout
@@ -161,9 +170,8 @@ class MainWindow(QtWidgets.QWidget):
 
     def load_page_description(self, description: str) -> None:
         """Load and display the page description."""
-        description_label = QtWidgets.QLabel(description)
+        description_label = self.create_info_label(description)
         description_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
-        description_label.setStyleSheet("font-size: 16px; color: #BBB;")
 
         self.ui_layout.addWidget(description_label)
 
@@ -180,6 +188,7 @@ class MainWindow(QtWidgets.QWidget):
         self.title_layout = QtWidgets.QHBoxLayout()
         self.theme_dropdown = QtWidgets.QComboBox()
 
+        self.load_dropdown_label()
         self.theme_dropdown.addItems(self.themes)  # Populate the dropdown with themes
         self.theme_dropdown.setCurrentText(self.current_theme)  # Set the default theme
         self.theme_dropdown.currentIndexChanged.connect(
@@ -187,7 +196,6 @@ class MainWindow(QtWidgets.QWidget):
         )  # Signal when user changes the theme
 
         self.title_layout.addWidget(self.theme_dropdown)
-        self.load_dropdown_label()
         self.ui_layout.addLayout(self.title_layout)
 
     def theme_changed(self) -> None:
@@ -212,12 +220,15 @@ class MainWindow(QtWidgets.QWidget):
         if index != -1:  # If the theme is found
             self.theme_dropdown.setCurrentIndex(index)
 
-    def load_sets_from_theme(self, theme: str) -> None:
+    def load_sets_from_theme(self, theme: str, update_sets=True) -> None:
         """Load and display sets from the selected theme.
 
         Args:
-            theme (str): The selected theme."""
-        self.sets = get_sets_from_theme(theme)  # Update the sets
+            theme (str): The selected theme.
+            update_sets (bool): Whether to call the API to get new sets.
+        """
+        if update_sets:
+            self.sets = get_sets_from_theme(theme)  # Update the sets
         self.displayed_sets_count = 0
         self.display_next_sets_batch()  # Display first batch of sets
 
@@ -239,7 +250,7 @@ class MainWindow(QtWidgets.QWidget):
             2,
         )
 
-    def display_next_collected_sets_batch(self):
+    def display_next_collected_sets_batch(self) -> None:
         """Display the next batch of collected sets."""
         self.displayed_collected_sets_count += self.display_next_batch(
             self.currently_selected_collection,
@@ -248,7 +259,8 @@ class MainWindow(QtWidgets.QWidget):
             4,
         )
 
-    def display_next_batch_of_collections(self):
+    def display_next_batch_of_collections(self) -> None:
+        """Display the next batch of collections."""
         self.displayed_collections_count += self.display_next_batch(
             self.collections,
             self.displayed_collections_count,
@@ -263,7 +275,14 @@ class MainWindow(QtWidgets.QWidget):
         widget_create_func: callable,
         column_count: int = 4,
     ) -> int:
-        """Display the next batch of widgets using the specified widget creation callback."""
+        """Display the next batch of widgets using the specified widget creation callback.
+
+        Args:
+            items_to_display (list): The items to display in format acceptable by widget_create_func.
+            displayed_amount (int): The amount of items already displayed.
+            widget_create_func (callable): The function to create the widget.
+            column_count (int): The number of columns in the grid layout.
+        """
         end_index = displayed_amount + self.SET_DISPLAY_BATCH
 
         for i in range(displayed_amount, min(end_index, len(items_to_display))):
@@ -280,39 +299,39 @@ class MainWindow(QtWidgets.QWidget):
 
     # ============================ WIDGETS ============================#
 
-    def add_load_more_button(self, display_func):
+    def add_load_more_button(self, display_func) -> None:
         """Add the 'Load More' button."""
         self.load_more_button = QtWidgets.QPushButton("Load More")
         self.load_more_button.clicked.connect(display_func)
         self.main_layout.addWidget(self.load_more_button)
 
-    def clear_main_layout(self):
-        """Clear the main layout."""
-        # print("Clearing main layout")
+    def clear_main_layout(self) -> None:
+        """Delete all widgets from the main lauyout."""
         self.delete_items_of_layout(self.main_layout)
-        self.main_layout = QtWidgets.QVBoxLayout()
-        self.layout.addLayout(self.main_layout)
-        self.grid_layout = QtWidgets.QGridLayout()
-        self.main_layout.addLayout(self.ui_layout)
 
-        # Normal UI components layout
+        self.main_layout = QtWidgets.QVBoxLayout()
+        self.grid_layout = QtWidgets.QGridLayout()
         self.ui_layout = QtWidgets.QVBoxLayout()
+
+        self.layout.addLayout(self.main_layout)
+        self.main_layout.addLayout(self.ui_layout)
         self.scroll_layout.addLayout(self.grid_layout)
 
-    def clear_grid_layout(self):
-        """Clear the grid layout."""
-        # print("Clearing grid layout")
+    def clear_grid_layout(self) -> None:
+        """Delete all widgets from the grid layout."""
         self.delete_items_of_layout(self.grid_layout)
-        self.current_row = 0
-        self.current_col = 0
+        self.current_row, self.current_col = 0, 0
 
-    def clear_scroll_layout(self):
-        """Clear the scroll layout."""
-        print("Clearing scroll layout")
+    def clear_scroll_layout(self) -> None:
+        """Delete all widgets from the scroll layout."""
         self.delete_items_of_layout(self.scroll_layout)
 
-    def delete_items_of_layout(self, layout: QtWidgets.QLayout):
-        """Delete items of a given layout."""
+    def delete_items_of_layout(self, layout: QtWidgets.QLayout) -> None:
+        """Delete items of a given layout.
+
+        Args:
+            layout (QtWidgets.QLayout): The layout to delete items from.
+        """
         if layout is not None:
             while layout.count():
                 item = layout.takeAt(0)
@@ -322,46 +341,73 @@ class MainWindow(QtWidgets.QWidget):
                 else:
                     self.delete_items_of_layout(item.layout())
 
+    def create_info_label(self, text: str) -> QtWidgets.QLabel:
+        """Create and style an information label.
+
+        Args:
+            text (str): The text to display.
+        """
+        label = QtWidgets.QLabel(text)
+        label.setStyleSheet(f"font-size: 16px; color: {PRIMARY_TEXT_COLOR};")
+        return label
+
+    def add_shadow_effect(self, widget: QtWidgets.QWidget) -> None:
+        """Add shadow effect to a widget.
+
+        Args:
+            widget (QtWidgets.QWidget): The widget to add shadow effect to.
+        """
+        shadow = QtWidgets.QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(10)
+        shadow.setOffset(2, 2)
+        widget.setGraphicsEffect(shadow)
+
     def create_set_widget(self, set_data: SetInfo) -> QtWidgets.QWidget:
-        """Create a widget for a single set."""
+        """Create a widget for single set. Displayed in the main layout.
+
+        Args:
+            set_data (SetInfo): The information about the set.
+        """
+
+        # Create the widget components
         set_widget = QtWidgets.QWidget()
         set_layout = QtWidgets.QVBoxLayout()
         image_layout = QtWidgets.QHBoxLayout()
         info_layout = QtWidgets.QVBoxLayout()
         button_layout = QtWidgets.QHBoxLayout()
 
+        # Add the components to the layout
         set_layout.addLayout(image_layout)
         set_layout.addLayout(info_layout)
         set_layout.addLayout(button_layout)
         set_widget.setLayout(set_layout)
 
-        # Add shadow effect
-        shadow = QtWidgets.QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(10)
-        shadow.setOffset(2, 2)
-        set_widget.setGraphicsEffect(shadow)
-        set_widget.setStyleSheet("background-color: #1B1B1E;")
+        # Style the widget
+        self.add_shadow_effect(set_widget)
+        set_widget.setStyleSheet(f"background-color: {SET_WIDGET_BACKGROUND_COLOR};")
 
         # Set details
-        set_name = QtWidgets.QLabel(f"📇 Name: {set_data.name}")
-        set_id = QtWidgets.QLabel(f"🪪 ID: {set_data.id}")
-        set_pieces = QtWidgets.QLabel(f"🧱 Bricks: {set_data.pieces}")
+        set_name = self.create_info_label(f"📇 Name: {set_data.name}")
+        set_id = self.create_info_label(f"🪪 ID: {set_data.id}")
+        set_pieces = self.create_info_label(f"🧱 Bricks: {set_data.pieces}")
 
+        # Add widgets to the layout
         info_layout.addWidget(set_name)
         info_layout.addWidget(set_id)
         info_layout.addWidget(set_pieces)
+
         self.style_card_info(info_layout)
 
         # Set image
         set_image = self.load_set_image(set_data.image_url)
         image_layout.addWidget(set_image)
 
-        # Action buttons
+        # Create action buttons
         wishlist_button = self.create_action_button(
-            "⭐ Wishlist", lambda: self.display_favourite_window(set_data)
+            "⭐ Wishlist", lambda: self.display_wishlist_dialog(set_data)
         )
         add_to_collection_button = self.create_action_button(
-            "📋 Collect", lambda: self.display_collect_window(set_data)
+            "📋 Collect", lambda: self.display_collection_dialog(set_data)
         )
 
         button_layout.addWidget(add_to_collection_button)
@@ -370,15 +416,13 @@ class MainWindow(QtWidgets.QWidget):
         return set_widget
 
     def create_wishlist_set_widget(self, set_info) -> QtWidgets.QWidget:
-        set_data = SetInfo(
-            set_id=set_info[0],
-            set_name=set_info[1],
-            set_img_url=set_info[2],
-            brickset_url=set_info[3],
-            year=set_info[4],
-            pieces=set_info[5],
-        )
+        """Create a widget for a single set in the wishlist.
 
+        Args:
+            set_info (tuple): The information about the set.
+        """
+
+        set_data = SetInfo(*set_info[:6])  # Changed to unpack the tuple
         set_notes = set_info[6]
 
         """Create a widget for a single set."""
@@ -389,8 +433,9 @@ class MainWindow(QtWidgets.QWidget):
         )  # Changed to QVBoxLayout for better alignment
         info_layout = QtWidgets.QVBoxLayout()
         button_layout = QtWidgets.QHBoxLayout()
-
         left_side_layout = QtWidgets.QVBoxLayout()
+
+        # Add sub-layouts to the main layout
         set_layout.addLayout(left_side_layout)
         set_layout.addLayout(image_layout)
 
@@ -398,35 +443,32 @@ class MainWindow(QtWidgets.QWidget):
         set_layout.setStretch(0, 1)
         set_layout.setStretch(1, 1)
 
+        # Add the layout to the widget
         left_side_layout.addLayout(info_layout)
         left_side_layout.addLayout(button_layout)
         set_widget.setLayout(set_layout)
 
-        # Add shadow effect
-        shadow = QtWidgets.QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(10)
-        shadow.setOffset(2, 2)
-        set_widget.setGraphicsEffect(shadow)
+        # Style the widget
+        self.add_shadow_effect(set_widget)
         set_widget.setStyleSheet("background-color: #1B1B1E;")
         set_widget.setMaximumHeight(400)
 
         # Set details
-        set_name = QtWidgets.QLabel(f"📇 Name: {set_data.name}")
-        set_id = QtWidgets.QLabel(f"🪪 ID: {set_data.id}")
-        set_pieces = QtWidgets.QLabel(f"🧱 Bricks: {set_data.pieces}")
-
-        # add id as link
-
-        set_brickset_url = QtWidgets.QLabel(
+        set_name = self.create_info_label(f"📇 Name: {set_data.name}")
+        set_id = self.create_info_label(f"🪪 ID: {set_data.id}")
+        set_pieces = self.create_info_label(f"🧱 Bricks: {set_data.pieces}")
+        set_brickset_url = self.create_info_label(
             f"🔗 <a href={set_data.brickset_url}>Brickset Link</a>"
         )
+
+        # Set the link to open in the browser
         set_brickset_url.setOpenExternalLinks(True)
 
+        # Add widgets to the layout
         info_layout.addWidget(set_name)
         info_layout.addWidget(set_id)
         info_layout.addWidget(set_pieces)
         info_layout.addWidget(set_brickset_url)
-        self.style_card_info(info_layout)
 
         # Set image
         set_image = self.load_set_image(set_data.image_url)
@@ -447,43 +489,32 @@ class MainWindow(QtWidgets.QWidget):
 
         return set_widget
 
-    def remove_from_wishlist(self, set_id: str, widget: QtWidgets.QWidget):
-        """Remove a set from the wishlist."""
-        print(f"Removing set {set_id} from wishlist")
+    # ============================ UTILITIES ============================#
+
+    def remove_from_wishlist(self, set_id: str, widget: QtWidgets.QWidget) -> None:
+        """Remove a set from the database and delete its widget.
+
+        Args:
+            set_id (str): The ID of the set to remove.
+            widget (QtWidgets.QWidget): The widget to remove.
+        """
         Model.remove_from_wishlist(set_id)
         self.remove_widget(widget)
 
-    def remove_widget(self, widget: QtWidgets.QWidget):
-        """Remove a widget from the layout."""
+    def remove_widget(self, widget: QtWidgets.QWidget) -> None:
+        """Remove a widget from the layout.
 
+        Args:
+            widget (QtWidgets.QWidget): The widget to remove.
+        """
         widget.deleteLater()
 
-    def show_wishlist_detail_dialog(self, set_data: SetInfo, notes: str):
-        """Display the wishlist detail dialog."""
-        dialog = self.create_dialog("Wishlist Detail", 600, 400)
-        layout = dialog.layout()
-
-        set_name_label = QtWidgets.QLabel(f"Set Name: {set_data.name}")
-        set_id_label = QtWidgets.QLabel(f"Set ID: {set_data.id}")
-        set_notes = QtWidgets.QTextEdit()
-        set_notes.setPlainText(notes)
-
-        save_button = QtWidgets.QPushButton("Save")
-        save_button.clicked.connect(
-            lambda: self.update_wishlisted_set_notes(
-                set_data.id, set_notes.toPlainText(), dialog
-            )
-        )
-
-        layout.addWidget(set_name_label)
-        layout.addWidget(set_id_label)
-        layout.addWidget(set_notes)
-        layout.addWidget(save_button)
-
-        dialog.exec()
-
     def load_set_image(self, image_url: str) -> QtWidgets.QLabel:
-        """Load and return the set image."""
+        """Load and return the set image.
+
+        Args:
+            image_url (str): The URL of the image.
+        """
         set_image = QtWidgets.QLabel()
         image_data = urllib.request.urlopen(image_url).read()
         image = QtGui.QImage()
@@ -506,94 +537,123 @@ class MainWindow(QtWidgets.QWidget):
         return set_image
 
     def create_action_button(
-        self, text: str, callback: callable
+        self,
+        text: str,
+        callback: callable,
+        bg_color: str = "#333",
+        hover_color: str = "#555",
     ) -> QtWidgets.QPushButton:
-        """Create and style an action button."""
+        """Create and style an action button.
+
+        Args:
+            text (str): The text to display on the button.
+            callback (callable): The function to call when the button is clicked.
+            bg_color (str): The background color of the button.
+            hover_color (str): The background color of the button when hovered.
+        """
         button = QtWidgets.QPushButton(text)
 
         button.setFixedHeight(30)
         button.clicked.connect(callback)
         button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #333;
+            f"""
+            QPushButton {{
+                font-size: {BUTTON_FONT_SIZE}px;
+                background-color: {bg_color};
                 color: white;
                 border: none;
                 text-align: center;
-            }
-            QPushButton:hover {
-                background-color: #555;
-            }
+                font-weight: 600;
+            }}
+            QPushButton:hover {{
+                background-color: {hover_color};
+            }}
         """
         )
         return button
 
-    def style_card_info(self, layout: QtWidgets.QVBoxLayout):
-        """Style the information in the card."""
+    def style_card_info(self, layout: QtWidgets.QVBoxLayout) -> None:
+        """Style the information in the card.
+
+        Args:
+            layout (QtWidgets.QVBoxLayout): The layout containing the information.
+        """
         for i in range(layout.count()):
             widget = layout.itemAt(i).widget()
             if widget is not None:
                 widget.setWordWrap(True)
                 widget.setStyleSheet(
-                    """
-                    font-size: 14px;
+                    f"""
+                    font-size: {PRIMARY_FONT_SIZE}px;
                     font-weight: 500;
                     color: white;
                     margin: 5px 0px 5px 0px;
                 """
                 )
 
-    def load_themes(self):
-        """Load and display themes."""
-        self.collections = Model.get_all_collections()
+    # ============================ VIEWS ============================#
+
+    def load_theme_selection_view(self, update_sets=False) -> None:
+        """Load and display view with theme selection and its sets.
+
+        Args:
+            update_sets (bool): Whether to update the sets from the API.
+        """
+        self.collections = Model.get_all_collections()  # Get all collections
         self.collection_names = [collection[0] for collection in self.collections]
 
         self.displayed_sets_count = 0
-        self.clear_main_layout()
-        # self.clear_grid_layout()
+        self.current_row, self.current_col = 0, 0
 
-        self.current_row = 0
-        self.current_col = 0
+        self.clear_main_layout()
         self.setup_main_layout()
 
-        self.load_title("Themes")
+        self.load_title("Theme Selection")
         self.load_theme_dropdown()
         self.add_load_more_button(self.display_next_sets_batch)
-        self.load_sets_from_theme(self.current_theme)
 
-    # ============================ SCENES ============================#
+        self.load_sets_from_theme(self.current_theme, update_sets)
 
-    def load_wishlist(self):
+    def load_wishlist_view(self) -> None:
         """Load the wishlist view."""
+        self.wishlisted_sets = Model.get_wishlist_data()
         self.displayed_wishlist_items_count = 0
+
         self.clear_main_layout()
         self.setup_main_layout()
 
-        self.wishlisted_sets = Model.get_wishlist_data()
-
-        self.load_title("Wishlist")
+        self.load_title("Your Wishlist")
         self.add_load_more_button(self.display_next_wishlist_batch)
         self.display_next_wishlist_batch()
 
-    def load_collections(self):
+    def load_collections_view(self) -> None:
         """Load the collections view."""
         self.collections = Model.get_all_collections()
         self.collection_names = [collection[0] for collection in self.collections]
         self.displayed_collections_count = 0
+
         self.clear_main_layout()
         self.setup_main_layout()
 
         self.load_title("Collections")
-        self.ui_layout.addWidget(self.display_new_collection_button())
+        self.ui_layout.addWidget(self.create_new_collection_button())
         self.add_load_more_button(self.display_next_batch_of_collections)
         self.display_next_batch_of_collections()
-        print("Loading collections")
 
-    def display_sets_from_collection(self, collection_name, collection_description):
+    def load_collection_sets_view(
+        self, collection_name: str, collection_description: str
+    ) -> None:
+        """Load the collection sets view.
+
+        Args:
+            collection_name (str): The name of the collection.
+            collection_description (str): The description of the collection.
+        """
+        self.displayed_collected_sets_count = 0
+
         self.clear_main_layout()
         self.setup_main_layout()
 
-        self.displayed_collected_sets_count = 0
         self.currently_selected_collection = Model.get_collection_data(collection_name)
 
         self.load_title(f"Collection: {collection_name}")
@@ -601,40 +661,35 @@ class MainWindow(QtWidgets.QWidget):
         self.add_load_more_button(self.display_next_collected_sets_batch)
         self.display_next_collected_sets_batch()
 
-    # ============================ FAVOURITES ============================#
+    # ============================ STYLING ============================#
 
-    def display_favourite_window(self, set_data: SetInfo):
-        """Display the favourite window for a set."""
-        set_id = set_data.id
-        set_name = set_data.name
-
-        # Create a dialog window
-        dialog = self.create_dialog("Favourite Window", 600, 400)
-        layout = dialog.layout()
-
-        # Styling the dialog layout
-        dialog.setStyleSheet(
-            """
-            QDialog {
-                background-color: #2C2C2E;
-                border: 2px solid #555;
-                border-radius: 10px;
-                padding: 20px;
-            }
-            """
+    def style_major_button(
+        self,
+        button: QtWidgets.QPushButton,
+        background_color: str = "#1E90FF",
+        hover_color: str = "#007ACC",
+    ) -> QtWidgets.QPushButton:
+        """Style the major button."""
+        button.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: {background_color};
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                font-size: 16px;
+            }}
+            QPushButton:hover {{
+                background-color: {hover_color};
+            }}
+        """
         )
+        return button
 
-        # Create widgets
-        set_name_label = QtWidgets.QLabel(f"Set Name: {set_name}")
-        set_name_label.setStyleSheet(
-            "font-size: 18px; font-weight: bold; color: white;"
-        )
-
-        set_id_label = QtWidgets.QLabel(f"Set ID: {set_id}")
-        set_id_label.setStyleSheet("font-size: 16px; color: #BBB;")
-
-        set_notes = QtWidgets.QTextEdit()
-        set_notes.setStyleSheet(
+    def style_text_edit(self, text_edit: QtWidgets.QTextEdit) -> QtWidgets.QTextEdit:
+        """Style the text edit widget."""
+        text_edit.setStyleSheet(
             """
             QTextEdit {
                 background-color: #444;
@@ -643,28 +698,59 @@ class MainWindow(QtWidgets.QWidget):
                 border-radius: 5px;
                 padding: 10px;
             }
-            """
+        """
         )
-        set_notes.setPlaceholderText("Add notes here")
+        return text_edit
 
-        save_button = QtWidgets.QPushButton("Save")
-        save_button.setStyleSheet(
+    def style_dialog(self, dialog: QtWidgets.QDialog) -> QtWidgets.QDialog:
+        """Style the dialog window."""
+        dialog.setStyleSheet(
             """
-            QPushButton {
-                background-color: #1E90FF;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 5px;
-                font-size: 16px;
+            QDialog {
+                background-color: #2C2C2E;
+                border: 2px solid #555;
+                border-radius: 10px;
+                padding: 20px;
             }
-            QPushButton:hover {
-                background-color: #007ACC;
-            }
-            """
+        """
         )
+        return dialog
+
+    # ============================ DIALOGS ============================#
+
+    def display_wishlist_dialog(self, set_data: SetInfo) -> None:
+        """Display the favourite window for a set.
+
+        Args:
+            set_data (SetInfo): The information about the set.
+        """
+        set_id = set_data.id
+        set_name = set_data.name
+
+        # Create a dialog window
+        dialog = self.create_dialog("Wishlist Window", DIALOG_WIDTH, DIALOG_HEIGHT)
+        layout = dialog.layout()
+
+        # Styling the dialog layout
+        dialog = self.style_dialog(dialog)
+
+        # Create widgets
+        set_name_label = self.create_info_label(f"📇 Set Name: {set_name}")
+        set_name_label.setStyleSheet(
+            "font-size: 18px; font-weight: bold; color: white;"
+        )
+        set_id_label = self.create_info_label(f"🪪 Set ID: {set_id}")
+
+        # Text edit for notes
+        set_notes = QtWidgets.QTextEdit()
+        set_notes = self.style_text_edit(set_notes)
+        set_notes.setPlaceholderText("Add notes here...")
+
+        # Save button
+        save_button = QtWidgets.QPushButton("💾 Save to Wishlist")
+        save_button = self.style_major_button(save_button)
         save_button.clicked.connect(
-            lambda: self.add_to_favorite(set_data, set_notes.toPlainText(), dialog)
+            lambda: self.add_to_wishlist(set_data, set_notes.toPlainText(), dialog)
         )
 
         # Add widgets to the layout
@@ -675,47 +761,48 @@ class MainWindow(QtWidgets.QWidget):
 
         dialog.exec()
 
-    def update_wishlisted_set_notes(self, set_id: str, notes: str, dialog):
-        """Update the notes for a wishlisted set."""
-        print(f"Updating notes for set {set_id}")
-        print(f"Notes: {notes}")
-        Model.update_wishlisted_set_notes(set_id, notes)
-        dialog.close()
+    def display_collection_dialog(self, set_data: SetInfo) -> None:
+        """Display the collection dialog for a set.
 
-    def add_to_favorite(self, set_data: SetInfo, notes: str, dialog: QtWidgets.QDialog):
-        """Add a set to favourites."""
-        print(f"Adding set {set_data.id} to favourites")
-        print(f"Notes: {notes}")
-
-        Model.save_to_wishlist(set_data, notes)
-        dialog.close()
-
-    def display_collect_window(self, set_data: SetInfo):
-        """Display the collection window for a set."""
+        Args:
+            set_data (SetInfo): The information about the set
+        """
         set_id = set_data.id
         set_name = set_data.name
 
-        dialog = self.create_dialog("Collection Window", 600, 400)
+        dialog = self.create_dialog("Collection Window", DIALOG_WIDTH, DIALOG_HEIGHT)
+        # Styling the dialog layout
+        dialog = self.style_dialog(dialog)
+
         layout = dialog.layout()
-
-        set_name_label = QtWidgets.QLabel(f"Set Name: {set_name}")
-        set_id_label = QtWidgets.QLabel(f"Set ID: {set_id}")
         dropdown = QtWidgets.QComboBox()
-        theme_label = QtWidgets.QLabel("Select Collection:")
 
+        # Style the dialog layout
+        set_name_label = self.create_info_label(f"📇 Set Name: {set_name}")
+        set_id_label = self.create_info_label(f"🪪 Set ID: {set_id}")
+        theme_label = self.create_info_label("📃 Select Collection:")
+
+        set_name_label.setStyleSheet(
+            "font-size: 18px; font-weight: bold; color: white;"
+        )
+
+        # Populate the dropdown with collection names
         dropdown.addItems(self.collection_names)
         dropdown.setCurrentText(self.collection_names[0])
 
         set_notes = QtWidgets.QTextEdit()
         set_notes.setPlaceholderText("Add notes here")
+        set_notes = self.style_text_edit(set_notes)
 
-        save_button = QtWidgets.QPushButton("Save")
+        save_button = QtWidgets.QPushButton("💾 Save to Collection")
+        save_button = self.style_major_button(save_button)
         save_button.clicked.connect(
             lambda: self.add_to_collection(
                 set_data, set_notes.toPlainText(), dialog, dropdown.currentText()
             )
         )
 
+        # Add widgets to the layout
         layout.addWidget(set_name_label)
         layout.addWidget(set_id_label)
         layout.addWidget(theme_label)
@@ -725,68 +812,29 @@ class MainWindow(QtWidgets.QWidget):
 
         dialog.exec()
 
-    def add_to_collection(
-        self,
-        set_data: SetInfo,
-        notes: str,
-        dialog: QtWidgets.QDialog,
-        collection_name: str,
-    ):
-        """Add a set to a collection."""
-        print(f"Adding set {set_data.id} to collection")
-        print(f"Notes: {notes}")
-        print(f"Collection: {collection_name}")
-        Model.save_collected_set(set_data, collection_name, notes)
-        dialog.close()
-
-    def create_dialog(self, title: str, width: int, height: int) -> QtWidgets.QDialog:
-        """Helper function to create and return a dialog."""
-        dialog = QtWidgets.QDialog()
-        dialog.setWindowTitle(title)
-        dialog.setFixedSize(width, height)
-        layout = QtWidgets.QVBoxLayout()
-        dialog.setLayout(layout)
-        return dialog
-
-    def style_call_to_action_button(self, button: QtWidgets.QPushButton):
-        """Style the call to action button."""
-        button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #1E90FF;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 5px;
-                font-size: 16px;
-            }
-            QPushButton:hover {
-                background-color: #007ACC;
-            }
-        """
-        )
-
-    def display_new_collection_button(self):
-        """Display the 'Create Collection' button."""
-        create_button = QtWidgets.QPushButton("Create Collection")
-        self.style_call_to_action_button(create_button)
-        create_button.clicked.connect(self.create_collection_dialog)
-        return create_button
-
-    def create_collection_dialog(self):
-        """Create a new collection."""
-        dialog = self.create_dialog("Create Collection", 600, 400)
+    def create_collection_dialog(self) -> None:
+        """Create a dialog for new collection."""
+        dialog = self.create_dialog("Create Collection", DIALOG_WIDTH, DIALOG_HEIGHT)
+        # Styling the dialog layout
+        dialog = self.style_dialog(dialog)
         layout = dialog.layout()
 
         window_description = QtWidgets.QLabel("Create a new collection")
+        window_description.setStyleSheet("font-size: 18px; color: white;")
+
         collection_name_input = QtWidgets.QLineEdit()
+        collection_name_input = self.style_text_edit(collection_name_input)
         collection_name_input.setPlaceholderText("Enter collection name")
 
         collection_description_input = QtWidgets.QTextEdit()
+        collection_description_input = self.style_text_edit(
+            collection_description_input
+        )
         collection_description_input.setPlaceholderText("Enter collection description")
 
-        save_button = self.create_action_button(
-            "💾 Save collection",
+        save_button = QtWidgets.QPushButton("💾 Save Collection")
+        save_button = self.style_major_button(save_button)
+        save_button.clicked.connect(
             lambda: self.save_collection(
                 collection_name_input.text(),
                 collection_description_input.toPlainText(),
@@ -801,60 +849,26 @@ class MainWindow(QtWidgets.QWidget):
 
         dialog.exec()
 
-    def save_collection(self, name, description, dialog: QtWidgets.QDialog):
-        """Save the new collection."""
-        print(f"Saving collection: {name} - {description}")
-        Model.create_collection(name, description)
-        dialog.close()
-        self.load_collections()
-
-    # ============================ COLLECTIONS ============================#
-
-    def create_collection_widget(self, collection_info: tuple):
-        """Show a collection card."""
-        collection_name = collection_info[0]
-        collection_description = collection_info[1]
-
-        layout = QtWidgets.QVBoxLayout()
-        collection_widget = QtWidgets.QWidget()
-        collection_widget.setLayout(layout)
-
-        collection_name_label = QtWidgets.QLabel(collection_name)
-        delete_button = self.create_action_button(
-            "❌ Delete",
-            lambda: self.delete_collection(collection_name, collection_widget),
-        )
-        view_button = self.create_action_button(
-            "🔍 View",
-            lambda: self.display_sets_from_collection(
-                collection_name, collection_description
-            ),
-        )
-
-        layout.addWidget(collection_name_label)
-        layout.addWidget(view_button)
-        layout.addWidget(delete_button)
-
-        return collection_widget
-
-    def delete_collection(self, name, widget):
-        print(f"Deleting collection: {name}")
-        Model.delete_collection(name)
-        self.remove_widget(widget)
-
-    def display_collected_set_edit_window(self, collected_set_info: CollectedSet):
+    def display_collected_set_edit_dialog(self, collected_set_info: CollectedSet):
         """Display the edit window for a collected set."""
-        dialog = self.create_dialog("Edit Collection", 600, 400)
+        dialog = self.create_dialog("Edit Collection", DIALOG_WIDTH, DIALOG_HEIGHT)
+        # Styling the dialog layout
+        dialog = self.style_dialog(dialog)
         layout = dialog.layout()
 
-        set_name_label = QtWidgets.QLabel(
-            f"Set Name: {collected_set_info.set_info.name}"
+        set_name_label = self.create_info_label(
+            f"📇 Set Name: {collected_set_info.set_info.name}"
         )
-        set_id_label = QtWidgets.QLabel(f"Set ID: {collected_set_info.set_info.id}")
+        set_id_label = self.create_info_label(
+            f"🪪 Set ID: {collected_set_info.set_info.id}"
+        )
+
         set_notes = QtWidgets.QTextEdit()
+        set_notes = self.style_text_edit(set_notes)
         set_notes.setPlainText(collected_set_info.notes)
 
-        save_button = QtWidgets.QPushButton("Save")
+        save_button = QtWidgets.QPushButton("💾 Save Changes")
+        save_button = self.style_major_button(save_button)
         save_button.clicked.connect(
             lambda: self.update_collected_set(
                 collected_set_info, set_notes.toPlainText(), dialog
@@ -868,25 +882,209 @@ class MainWindow(QtWidgets.QWidget):
 
         dialog.exec()
 
+    def show_wishlist_detail_dialog(self, set_data: SetInfo, notes: str) -> None:
+        """Display the wishlist detail dialog.
+
+        Args:
+            set_data (SetInfo): The information about the set.
+            notes (str): The notes about the set.
+        """
+        dialog = self.create_dialog("Wishlist Detail", DIALOG_WIDTH, DIALOG_HEIGHT)
+
+        # Styling the dialog layout
+        dialog = self.style_dialog(dialog)
+        layout = dialog.layout()
+        set_name_label = self.create_info_label(f"📇 Set Name: {set_data.name}")
+        set_id_label = self.create_info_label(f"🪪 Set ID: {set_data.id}")
+
+        set_notes = QtWidgets.QTextEdit()
+        set_notes = self.style_text_edit(set_notes)
+        set_notes.setPlainText(notes)
+
+        save_button = QtWidgets.QPushButton("💾 Save Changes")
+        save_button = self.style_major_button(save_button)
+        save_button.clicked.connect(
+            lambda: self.update_wishlisted_set_notes(
+                set_data.id, set_notes.toPlainText(), dialog
+            )
+        )
+
+        # Add widgets to the layout
+        layout.addWidget(set_name_label)
+        layout.addWidget(set_id_label)
+        layout.addWidget(set_notes)
+        layout.addWidget(save_button)
+
+        dialog.exec()
+
+    def create_dialog(self, title: str, width: int, height: int) -> QtWidgets.QDialog:
+        """Helper function to create and return a dialog.
+
+        Args:
+            title (str): The title of the dialog.
+            width (int): The width of the dialog.
+            height (int): The height of the dialog.
+        """
+        dialog = QtWidgets.QDialog()
+        layout = QtWidgets.QVBoxLayout()
+        dialog.setWindowTitle(title)
+        dialog.setFixedSize(width, height)
+        dialog.setLayout(layout)
+        return dialog
+
+    # ============================ DATA ============================#
+
+    def update_wishlisted_set_notes(self, set_id: str, notes: str, dialog) -> None:
+        """Update the notes for a wishlisted set and close passed dialog.
+
+        Args:
+            set_id (str): The ID of the set.
+            notes (str): The notes to update.
+            dialog (QtWidgets.QDialog): The dialog to close.
+        """
+        Model.update_wishlisted_set_notes(set_id, notes)
+        dialog.close()
+
+    def add_to_wishlist(
+        self, set_data: SetInfo, notes: str, dialog: QtWidgets.QDialog
+    ) -> None:
+        """Add a set to favourites.
+
+        Args:
+            set_data (SetInfo): The information about the set.
+            notes (str): The notes about the set.
+            dialog (QtWidgets.QDialog): The dialog to close.
+        """
+        Model.save_to_wishlist(set_data, notes)
+        dialog.close()
+
+    def add_to_collection(
+        self,
+        set_data: SetInfo,
+        notes: str,
+        dialog: QtWidgets.QDialog,
+        collection_name: str,
+    ) -> None:
+        """Add a set to a collection and close the dialog.
+
+        Args:
+            set_data (SetInfo): The information about the set.
+            notes (str): The notes about the set.
+            dialog (QtWidgets.QDialog): The dialog to close.
+            collection_name (str): The name of the collection.
+        """
+        Model.save_collected_set(set_data, collection_name, notes)
+        dialog.close()
+
+    def save_collection(
+        self, name: str, description: str, dialog: QtWidgets.QDialog
+    ) -> None:
+        """Save the new collection and close the dialog. Reloads the collections view.
+
+        Args:
+            name (str): The name of the collection.
+            description (str): The description of the collection.
+            dialog (QtWidgets.QDialog): The dialog to close.
+        """
+        Model.create_collection(name, description)
+        dialog.close()
+        self.load_collections_view()  # Reload the collections view
+
+    def delete_collection(self, name: str, widget: QtWidgets.QWidget) -> None:
+        """Delete a collection and remove its widget.
+
+        Args:
+            name (str): The name of the collection.
+            widget (QtWidgets.QWidget): The widget to remove.
+        """
+        Model.delete_collection(name)
+        self.remove_widget(widget)
+
     def update_collected_set(
-        self, collected_set_info: CollectedSet, notes: str, dialog
-    ):
-        """Update the notes for a collected set."""
-        print(f"Updating notes for set {collected_set_info.set_info.id}")
-        print(f"Notes: {notes}")
+        self, collected_set_info: CollectedSet, notes: str, dialog: QtWidgets.QDialog
+    ) -> None:
+        """Update the notes for a collected set. Close the dialog.
+
+        Args:
+            collected_set_info (CollectedSet): The information about the collected set.
+            notes (str): The notes to update.
+            dialog (QtWidgets.QDialog): The dialog to close.
+        """
         Model.update_collected_set_notes(
             collected_set_info.collection_name, collected_set_info.set_info.id, notes
         )
         dialog.close()
 
-    def remove_from_collection(self, collection_name, set_id, widget):
-        """Remove a set from a collection."""
-        print(f"Removing set {set_id} from collection {collection_name}")
+    def remove_from_collection(
+        self, collection_name: str, set_id: str, widget: QtWidgets.QWidget
+    ) -> None:
+        """Remove a set from a collection.
+
+        Args:
+            collection_name (str): The name of the collection.
+            set_id (str): The ID of the set.
+            widget (QtWidgets.QWidget): The widget to remove.
+        """
         self.remove_widget(widget)
         Model.remove_from_collection(collection_name, set_id)
 
-    def display_collected_set_widget(self, collected_set_info: CollectedSet):
-        """Create a widget for a single set."""
+    # ============================ WIDGETS ============================#
+
+    def create_new_collection_button(self) -> QtWidgets.QPushButton:
+        """Return the 'Create Collection' button."""
+        create_button = QtWidgets.QPushButton("Create Collection")
+        create_button = self.style_major_button(create_button)
+        create_button.clicked.connect(self.create_collection_dialog)
+
+        return create_button
+
+    def create_collection_widget(self, collection_info: tuple) -> QtWidgets.QWidget:
+        """Show a collection card.
+
+        Args:
+            collection_info (tuple): The information about the collection.
+        """
+        collection_name = collection_info[0]
+        collection_description = collection_info[1]
+
+        layout = QtWidgets.QVBoxLayout()
+        collection_widget = QtWidgets.QWidget()
+        collection_widget.setLayout(layout)
+        collection_widget.setStyleSheet(
+            f"background-color: {SET_WIDGET_BACKGROUND_COLOR};"
+        )
+
+        collection_name_label = self.create_info_label(collection_name)
+        collection_name_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignCenter
+        )  # Center the text
+        collection_name_label.setStyleSheet("font-size: 20px;")  # Add darker background
+
+        delete_button = self.create_action_button(
+            "❌ Delete",
+            lambda: self.delete_collection(collection_name, collection_widget),
+        )
+        view_button = self.create_action_button(
+            "🔍 View",
+            lambda: self.load_collection_sets_view(
+                collection_name, collection_description
+            ),
+        )
+
+        layout.addWidget(collection_name_label)
+        layout.addWidget(view_button)
+        layout.addWidget(delete_button)
+
+        return collection_widget
+
+    def display_collected_set_widget(
+        self, collected_set_info: CollectedSet
+    ) -> QtWidgets.QWidget:
+        """Create a widget for a single set.
+
+        Args:
+            collected_set_info (CollectedSet): The information about the collected set.
+        """
         set_widget = QtWidgets.QWidget()
         set_layout = QtWidgets.QVBoxLayout()
         image_layout = QtWidgets.QHBoxLayout()
@@ -899,24 +1097,21 @@ class MainWindow(QtWidgets.QWidget):
         set_widget.setLayout(set_layout)
 
         # Add shadow effect
-        shadow = QtWidgets.QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(10)
-        shadow.setOffset(2, 2)
-        set_widget.setGraphicsEffect(shadow)
-        set_widget.setStyleSheet("background-color: #1B1B1E;")
+        self.add_shadow_effect(set_widget)
 
         # Set details
-        set_name = QtWidgets.QLabel(f"📇 Name: {collected_set_info.set_info.name}")
-        set_id = QtWidgets.QLabel(f"🪪 ID: {collected_set_info.set_info.id}")
-        set_pieces = QtWidgets.QLabel(
+        set_name = self.create_info_label(
+            f"📇 Name: {collected_set_info.set_info.name}"
+        )
+        set_id = self.create_info_label(f"🪪 ID: {collected_set_info.set_info.id}")
+        set_pieces = self.create_info_label(
             f"🧱 Bricks: {collected_set_info.set_info.pieces}"
         )
-
-        set_url = QtWidgets.QLabel(
+        set_url = self.create_info_label(
             f"🔗 <a href='{collected_set_info.set_info.brickset_url}'>Brickset link</a>"
         )
         set_url.setOpenExternalLinks(True)
-        set_notes = QtWidgets.QLabel(f"📝 Notes: {collected_set_info.notes}")
+        set_notes = self.create_info_label(f"📝 Notes: {collected_set_info.notes}")
 
         info_layout.addWidget(set_name)
         info_layout.addWidget(set_id)
@@ -941,7 +1136,7 @@ class MainWindow(QtWidgets.QWidget):
         )
         add_to_collection_button = self.create_action_button(
             "✏️ Edit",
-            lambda: self.display_collected_set_edit_window(collected_set_info),
+            lambda: self.display_collected_set_edit_dialog(collected_set_info),
         )
 
         button_layout.addWidget(add_to_collection_button)
