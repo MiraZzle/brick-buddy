@@ -58,5 +58,7 @@ To run BrickBuddy, execute:
 python main.py
 ```
 
+![brick_buddy_gif](Docs/brick_buddy_gif.gif)
+
 ## Contributing
 Contributions are welcome! Please fork the repository and submit pull requests.
