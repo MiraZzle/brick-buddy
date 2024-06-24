@@ -1,7 +1,5 @@
 import csv
 import os
-import urllib.request
-
 from Utils.api_requests import SetInfo
 
 DATA_DIRECTORY = "UserData"
@@ -19,10 +17,6 @@ class CollectedSet:
 
 
 class Model:
-    """
-    A class representing a data model for managing collections, sets, and wishlist items.
-    """
-
     @staticmethod
     def create_collection(collection_name, collection_description):
         """
