@@ -31,8 +31,6 @@ BrickBuddy is a desktop application designed for Lego enthusiasts to manage thei
 1. Clone the project from GitHub:
 ```bash
 git clone https://github.com/MiraZzle/brick-buddy.git
-cd brick-buddy
-
 ```
 2. Change directory to the project:
 ```bash
